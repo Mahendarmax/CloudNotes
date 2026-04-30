@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudNotes By Mahendar — Your Notes, Always Saved</title>
+    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <i class="fas fa-cloud"></i>
+            <span>Cloud<span class="highlight">Notes</span> <span class="by-author">By Mahendar</span></span>
+        </div>
+        <div class="navbar-actions">
+            <button class="btn btn-primary" id="btnNewNote">
+                <i class="fas fa-plus"></i> New Note
+            </button>
+            <button class="btn btn-outline" id="btnSetBackupFolder" title="Set local backup folder">
+                <i class="fas fa-folder-open"></i>
+            </button>
+            <button class="btn btn-outline" id="btnImport" title="Import notes from JSON backup">
+                <i class="fas fa-upload"></i>
+            </button>
+            <button class="btn btn-outline" id="btnExport" title="Export all notes as JSON">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Layout: Sidebar + Notes -->
+    <div class="app-layout">
+        <!-- Topics Sidebar -->
+        <aside class="topics-sidebar" id="topicsSidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-layer-group"></i> Topics</h3>
+                <div style="display:flex;gap:6px;">
+                    <button class="sidebar-add-btn" id="btnAddTopic" title="New Topic">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="sidebar-add-btn sidebar-del-btn" id="btnDeleteTopic" title="Delete selected topic">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="topic-list" id="topicList">
+                <div class="topic-item active" data-topic="all">
+                    <i class="fas fa-inbox"></i>
+                    <span class="topic-name">All Notes</span>
+                    <span class="topic-count" id="topicCountAll">0</span>
+                </div>
+                <div class="topic-item" data-topic="uncategorized">
+                    <i class="fas fa-file-alt"></i>
+                    <span class="topic-name">Uncategorized</span>
+                    <span class="topic-count" id="topicCountUncat">0</span>
+                </div>
+            </div>
+            <div class="sidebar-collapse-btn" id="btnCollapseSidebar" title="Collapse sidebar">
+                <i class="fas fa-chevron-left"></i>
+            </div>
+        </aside>
+
+        <!-- Notes Content Area -->
+        <div class="notes-content">
+
+            <!-- Notes Grid -->
+            <main class="notes-container" id="notesContainer">
+                <div class="empty-state" id="emptyState">
+                    <i class="fas fa-sticky-note"></i>
+                    <h2>No notes yet</h2>
+                    <p>Click <strong>"New Note"</strong> to create your first note.</p>
+                    <div class="shortcuts-hint">
+                        <span><kbd>Ctrl</kbd>+<kbd>B</kbd> Bold</span>
+                        <span><kbd>Ctrl</kbd>+<kbd>I</kbd> Italic</span>
+                        <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> Undo</span>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Note Editor Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <input type="text" class="modal-title-input" id="noteTitle" placeholder="Note title..." maxlength="100">
+                <div class="modal-header-actions">
+                    <select id="noteTopic" class="color-select" title="Assign topic">
+                        <option value="">No Topic</option>
+                    </select>
+                    <button class="modal-btn" id="btnPin" title="Pin note">
+                        <i class="fas fa-thumbtack"></i>
+                    </button>
+                    <button class="modal-btn" id="btnFullscreen" title="Toggle fullscreen">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button class="modal-btn close-btn" id="btnCloseModal" title="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Toolbar Row 1: Text formatting -->
+            <div class="modal-toolbar">
+                <button class="fmt-btn" id="btnUndo" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button class="fmt-btn" id="btnRedo" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+                <span class="toolbar-divider"></span>
+                <button class="fmt-btn" data-cmd="bold" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button>
+                <button class="fmt-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button>
+                <button class="fmt-btn" data-cmd="underline" title="Underline (Ctrl+U)"><i class="fas fa-underline"></i></button>
+                <button class="fmt-btn" data-cmd="strikeThrough" title="Strikethrough"><i class="fas fa-strikethrough"></i></button>
+                <button class="fmt-btn" id="btnHighlight" title="Highlight text"><i class="fas fa-highlighter"></i></button>
+                <span class="toolbar-divider"></span>
+                <!-- Font size -->
+                <select id="fontSizeSelect" class="toolbar-select" title="Font size">
+                    <option value="">Size</option>
+                    <option value="1">Small</option>
+                    <option value="3">Normal</option>
+                    <option value="5">Large</option>
+                    <option value="7">Huge</option>
+                </select>
+                <!-- Text color -->
+                <label class="color-picker-wrap" title="Text color">
+                    <i class="fas fa-font"></i>
+                    <input type="color" id="textColorPicker" value="#333333" class="hidden-color-input">
+                    <span class="color-indicator" id="textColorIndicator"></span>
+                </label>
+                <!-- Highlight color -->
+                <label class="color-picker-wrap" title="Highlight color">
+                    <i class="fas fa-fill-drip"></i>
+                    <input type="color" id="highlightColorPicker" value="#ffe066" class="hidden-color-input">
+                    <span class="color-indicator highlight-ind" id="highlightColorIndicator"></span>
+                </label>
+                <span class="toolbar-divider"></span>
+                <!-- Alignment -->
+                <button class="fmt-btn" data-cmd="justifyLeft" title="Align left"><i class="fas fa-align-left"></i></button>
+                <button class="fmt-btn" data-cmd="justifyCenter" title="Align center"><i class="fas fa-align-center"></i></button>
+                <button class="fmt-btn" data-cmd="justifyRight" title="Align right"><i class="fas fa-align-right"></i></button>
+                <button class="fmt-btn" data-cmd="justifyFull" title="Justify"><i class="fas fa-align-justify"></i></button>
+                <span class="toolbar-divider"></span>
+                <button class="fmt-btn" data-cmd="insertUnorderedList" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+                <button class="fmt-btn" data-cmd="insertOrderedList" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+                <button class="fmt-btn" data-cmd="indent" title="Indent"><i class="fas fa-indent"></i></button>
+                <button class="fmt-btn" data-cmd="outdent" title="Outdent"><i class="fas fa-outdent"></i></button>
+                <span class="toolbar-divider"></span>
+                <button class="fmt-btn" data-cmd="formatBlock" data-val="H2" title="Heading"><i class="fas fa-heading"></i></button>
+                <button class="fmt-btn" data-cmd="formatBlock" data-val="BLOCKQUOTE" title="Quote"><i class="fas fa-quote-left"></i></button>
+                <button class="fmt-btn" id="btnInsertCode" title="Code block"><i class="fas fa-code"></i></button>
+                <button class="fmt-btn" data-cmd="createLink" title="Insert link"><i class="fas fa-link"></i></button>
+                <button class="fmt-btn" data-cmd="removeFormat" title="Clear formatting"><i class="fas fa-eraser"></i></button>
+                <span class="toolbar-divider"></span>
+                <button class="fmt-btn" id="btnInsertTable" title="Insert table"><i class="fas fa-table"></i></button>
+                <button class="fmt-btn" id="btnInsertImage" title="Insert image"><i class="fas fa-image"></i></button>
+                <button class="fmt-btn" id="btnInsertRect" title="Insert rectangle"><i class="far fa-square"></i></button>
+                <button class="fmt-btn" id="btnInsertCircle" title="Insert circle"><i class="far fa-circle"></i></button>
+                <button class="fmt-btn" id="btnInsertLine" title="Insert horizontal line"><i class="fas fa-minus"></i></button>
+                <button class="fmt-btn" id="btnInsertDivider" title="Insert section divider"><i class="fas fa-grip-lines"></i></button>
+                <span class="toolbar-divider"></span>
+                <button class="fmt-btn" id="btnExportPdf" title="Export as PDF"><i class="fas fa-file-pdf"></i></button>
+            </div>
+            <div class="modal-body" id="noteBody" contenteditable="true" placeholder="Start writing..."></div>
+            <div class="modal-footer">
+                <div class="note-meta-group">
+                    <span class="note-meta" id="noteMeta"></span>
+                    <span class="note-stats" id="noteStats"></span>
+                </div>
+                <div class="modal-footer-actions">
+                    <button class="btn btn-danger" id="btnDeleteNote">
+                        <i class="fas fa-trash-alt"></i> Delete
+                    </button>
+                    <button class="btn btn-primary" id="btnSaveNote">
+                        <i class="fas fa-check"></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden inputs -->
+    <input type="file" id="imageInput" accept="image/*" hidden>
+    <input type="file" id="importInput" accept=".json" hidden>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/app.js?v=2"></script>
+</body>
+</html>

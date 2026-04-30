@@ -600,6 +600,14 @@
             card.addEventListener('click', () => openEditor(note.id));
             el.container.appendChild(card);
         });
+
+        // Staggered card entry animation for 120Hz smoothness
+        requestAnimationFrame(() => {
+            const cards = el.container.querySelectorAll('.note-card');
+            cards.forEach((c, i) => {
+                c.style.animationDelay = (i * 40) + 'ms';
+            });
+        });
     }
 
     // ===== Editor =====
@@ -694,11 +702,17 @@
     function deleteNote() {
         if (!editingId) return;
         if (!confirm('Delete this note permanently?')) return;
+        // Animate card removal
+        const card = el.container.querySelector('.note-card[data-id="' + editingId + '"]');
+        if (card) card.classList.add('note-card-removing');
         notes = notes.filter((n) => n.id !== editingId);
         saveNotes();
-        render(getSearchFilter());
-        renderTopics();
         closeEditor();
+        // Wait for animation to finish, then re-render
+        setTimeout(() => {
+            render(getSearchFilter());
+            renderTopics();
+        }, 300);
         showToast('Note deleted');
     }
 
@@ -1641,6 +1655,26 @@
         if (el.noteTopic) {
             el.noteTopic.addEventListener('change', scheduleAutoSave);
         }
+
+        // ===== 120Hz Smooth Scroll: Navbar shadow on scroll =====
+        let lastScrollY = 0;
+        let navbarTicking = false;
+        const navbar = document.querySelector('.navbar');
+        window.addEventListener('scroll', () => {
+            lastScrollY = window.scrollY;
+            if (!navbarTicking) {
+                requestAnimationFrame(() => {
+                    if (navbar) {
+                        navbar.classList.toggle('scrolled', lastScrollY > 10);
+                    }
+                    navbarTicking = false;
+                });
+                navbarTicking = true;
+            }
+        }, { passive: true });
+
+        // Add ripple class to all primary buttons
+        document.querySelectorAll('.btn-primary').forEach(b => b.classList.add('btn-ripple'));
     }
 
     // ===== Backup Popup =====
@@ -1671,47 +1705,65 @@
 
     // ===== Init =====
     async function init() {
-        loadNotes();
-        loadTopics();
-        // Restore backup folder handle (only if File System API is available)
-        let backupReady = false;
-        if (window.showDirectoryPicker) {
-            const savedHandle = await loadBackupHandle();
-            if (savedHandle) {
-                backupDirHandle = savedHandle;
-                backupReady = await verifyBackupAccess();
-                if (backupReady) {
-                    await loadFromBackup();
-                } else {
+        try {
+            loadNotes();
+            loadTopics();
+            // Restore backup folder handle (only if File System API is available)
+            let backupReady = false;
+            if (window.showDirectoryPicker) {
+                try {
+                    const savedHandle = await loadBackupHandle();
+                    if (savedHandle) {
+                        backupDirHandle = savedHandle;
+                        backupReady = await verifyBackupAccess();
+                        if (backupReady) {
+                            await loadFromBackup();
+                        } else {
+                            backupDirHandle = null;
+                        }
+                    }
+                } catch (backupErr) {
+                    console.warn('Backup restore skipped:', backupErr);
                     backupDirHandle = null;
                 }
             }
-        }
-        bind();
-        renderTopics();
-        updateTopicSelect();
-        render();
+            bind();
+            renderTopics();
+            updateTopicSelect();
+            render();
 
-        // Show popup if backup folder is not configured or permission lost
-        if (!backupReady) {
-            showBackupPopup();
-        }
+            // Show popup if backup folder is not configured or permission lost
+            if (!backupReady) {
+                showBackupPopup();
+            }
 
-        // Bind popup buttons
-        const popupBtn = document.getElementById('backupPopupBtn');
-        const popupClose = document.getElementById('backupPopupClose');
-        if (popupBtn) {
-            popupBtn.addEventListener('click', () => {
-                hideBackupPopup();
-                pickBackupFolder();
-            });
-        }
-        if (popupClose) {
-            popupClose.addEventListener('click', () => {
-                hideBackupPopup();
-            });
+            // Bind popup buttons
+            const popupBtn = document.getElementById('backupPopupBtn');
+            const popupClose = document.getElementById('backupPopupClose');
+            if (popupBtn) {
+                popupBtn.addEventListener('click', () => {
+                    hideBackupPopup();
+                    pickBackupFolder();
+                });
+            }
+            if (popupClose) {
+                popupClose.addEventListener('click', () => {
+                    hideBackupPopup();
+                });
+            }
+        } catch (err) {
+            console.error('CloudNotes init error:', err);
+            showToast('Something went wrong — please refresh');
         }
     }
+
+    // Global error handler — prevent silent failures
+    window.addEventListener('error', (e) => {
+        console.error('CloudNotes Error:', e.error || e.message);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+        console.error('CloudNotes Unhandled Promise:', e.reason);
+    });
 
     init();
 })();

@@ -1138,29 +1138,187 @@ html, body {
     z-index: 3;
 }
 
+/* ===== Mobile Sidebar Toggle ===== */
+.sidebar-toggle { display: none; }
+.btn-icon { padding: 9px 12px; }
+.btn-text { }
+
+/* ===== Mobile Overlay ===== */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 9;
+}
+.sidebar-overlay.show { display: block; }
+
 /* ===== Responsive ===== */
+
+/* ----- Mobile: up to 600px ----- */
 @media (max-width: 600px) {
-    .topics-sidebar { width: 200px; min-width: 200px; }
-    .navbar { padding: 0 14px; }
-    .navbar-brand { font-size: 18px; }
-    .notes-container { padding: 0 14px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-    .note-card { height: 180px; border-width: 4px; }
-    .note-card-inner { padding: 12px 14px 10px; }
-    .note-card-title { font-size: 12px; }
-    .modal { border-width: 8px; }
-    .modal-header { padding: 14px 16px 10px; margin: 6px 6px 0; }
+    /* Navbar */
+    .navbar { padding: 0 10px; height: 50px; }
+    .navbar-brand { font-size: 16px; gap: 6px; }
+    .navbar-brand i { font-size: 18px; }
+    .by-author { display: none; }
+    .btn-text { display: none; }
+    .btn { padding: 8px 10px; font-size: 13px; }
+    .navbar-actions { gap: 6px; }
+    .sidebar-toggle { display: inline-flex; }
+
+    /* Sidebar as overlay on mobile */
+    .topics-sidebar {
+        position: fixed;
+        top: 50px;
+        left: 0;
+        height: calc(100vh - 50px);
+        width: 260px;
+        min-width: 260px;
+        z-index: 11;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .topics-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    .topics-sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+    .sidebar-collapse-btn { display: none; }
+
+    /* Search bar */
+    .search-bar { margin: 10px 10px 0; padding: 8px 12px; }
+    .search-bar input { font-size: 14px; }
+    .sort-select { font-size: 11px; padding: 4px 6px; }
+
+    /* Notes grid */
+    .notes-container {
+        padding: 0 10px;
+        margin: 12px auto;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+    }
+    .note-card { height: 170px; border-width: 4px; }
+    .note-card-inner { padding: 10px 12px 8px; }
+    .note-card-title { font-size: 11px; padding-bottom: 6px; margin-bottom: 6px; }
+    .note-card-body { font-size: 11px; }
+    .note-card-footer { font-size: 9px; }
+
+    /* Modal: full screen on mobile */
+    .modal {
+        max-width: 100%;
+        max-height: 100vh;
+        height: 100vh;
+        border-width: 0;
+        border-radius: 0;
+    }
+    .modal::before { display: none; }
+    .modal-header {
+        padding: 12px 14px 10px;
+        margin: 0;
+        gap: 6px;
+    }
     .modal-title-input { font-size: 16px; letter-spacing: 1px; }
-    .modal-toolbar { padding: 6px 10px; margin: 0 6px; gap: 2px; }
-    .fmt-btn { width: 26px; height: 26px; font-size: 11px; }
-    .modal-body { padding: 16px; margin: 0 6px; font-size: 14px; }
-    .resizable-wrapper img { max-height: 250px; }
-    .modal-footer { padding: 10px 16px; margin: 0 6px 6px; }
-    .search-bar { margin: 12px 14px 0; }
+    .modal-header-actions { gap: 4px; }
+    .modal-btn { width: 30px; height: 30px; font-size: 13px; }
+
+    /* Toolbar: scrollable on mobile */
+    .modal-toolbar {
+        padding: 6px 10px;
+        margin: 0;
+        gap: 2px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    .fmt-btn { width: 32px; height: 32px; font-size: 13px; flex-shrink: 0; }
+    .toolbar-select { flex-shrink: 0; }
+    .toolbar-divider { margin: 0 2px; }
+
+    /* Editor body */
+    .modal-body { padding: 14px; margin: 0; font-size: 15px; }
+
+    /* Footer */
+    .modal-footer { padding: 8px 14px; margin: 0; }
+    .modal-footer .note-meta,
+    .modal-footer .note-stats { font-size: 10px; }
+
+    /* Backup popup */
+    .backup-popup { right: 10px; top: 58px; }
+    .backup-popup-content { min-width: auto; padding: 10px 14px; }
+    .backup-popup-text strong { font-size: 12px; }
+    .backup-popup-text span { font-size: 10px; }
+
+    /* Empty state */
+    .empty-state { padding: 40px 16px; }
+    .empty-state i { font-size: 40px; }
+    .empty-state h2 { font-size: 18px; }
+    .shortcuts-hint { display: none; }
+
+    /* Shapes / images smaller on mobile */
+    .resizable-wrapper img { max-height: 200px; }
 }
 
+/* ----- Tablet: 601px to 900px ----- */
 @media (min-width: 601px) and (max-width: 900px) {
-    .modal { border-width: 10px; }
+    .navbar { padding: 0 16px; }
+    .navbar-brand { font-size: 20px; }
+    .by-author { font-size: 11px; }
+    .sidebar-toggle { display: inline-flex; }
+
+    /* Sidebar as overlay on tablet */
+    .topics-sidebar {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        height: calc(100vh - 56px);
+        z-index: 11;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .topics-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    .topics-sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+    .sidebar-collapse-btn { display: none; }
+
+    /* Notes grid */
+    .notes-container {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+        padding: 0 16px;
+    }
+
+    /* Modal */
+    .modal { border-width: 10px; max-width: 95%; }
     .modal-header { padding: 14px 20px 10px; }
     .modal-title-input { font-size: 18px; }
-    .modal-body { padding: 20px; min-height: 300px; }
+    .modal-body { padding: 20px; }
+    .modal-toolbar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    .fmt-btn { flex-shrink: 0; }
+    .toolbar-select { flex-shrink: 0; }
+}
+
+/* ----- Large tablet / small laptop: 901px to 1024px ----- */
+@media (min-width: 901px) and (max-width: 1024px) {
+    .topics-sidebar { width: 200px; min-width: 200px; }
+    .notes-container { padding: 0 20px; }
+    .sidebar-toggle { display: none; }
+}
+
+/* ----- Desktop: above 1024px ----- */
+@media (min-width: 1025px) {
+    .sidebar-toggle { display: none; }
+}
+
+/* ----- Touch device enhancements ----- */
+@media (hover: none) and (pointer: coarse) {
+    .fmt-btn { width: 36px; height: 36px; font-size: 14px; }
+    .modal-btn { width: 38px; height: 38px; font-size: 15px; }
+    .btn { padding: 10px 16px; }
+    .topic-item { padding: 12px 16px; }
+    .note-card { min-height: 150px; }
 }

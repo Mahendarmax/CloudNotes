@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudNotes By Mahendar — Your Notes, Always Saved</title>
-    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/style.css?v=5">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -16,8 +16,11 @@
             <span>Cloud<span class="highlight">Notes</span> <span class="by-author">By Mahendar</span></span>
         </div>
         <div class="navbar-actions">
+            <button class="btn btn-icon sidebar-toggle" id="btnToggleSidebar" title="Toggle topics sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
             <button class="btn btn-primary" id="btnNewNote">
-                <i class="fas fa-plus"></i> New Note
+                <i class="fas fa-plus"></i> <span class="btn-text">New Note</span>
             </button>
             <button class="btn btn-outline" id="btnSetBackupFolder" title="Set local backup folder">
                 <i class="fas fa-folder-open"></i>
@@ -198,6 +201,6 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=4"></script>
+    <script src="js/app.js?v=5"></script>
 </body>
 </html>

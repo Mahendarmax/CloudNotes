@@ -58,6 +58,7 @@
         topicList: $('#topicList'),
         btnAddTopic: $('#btnAddTopic'),
         btnCollapseSidebar: $('#btnCollapseSidebar'),
+        btnToggleSidebar: $('#btnToggleSidebar'),
         btnDeleteTopic: $('#btnDeleteTopic'),
         noteTopic: $('#noteTopic'),
     };
@@ -214,6 +215,10 @@
     }
 
     async function pickBackupFolder() {
+        if (!window.showDirectoryPicker) {
+            showToast('Backup folders not supported in this browser. Use Chrome or Edge.');
+            return;
+        }
         try {
             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
             backupDirHandle = handle;
@@ -1643,6 +1648,35 @@
             }
         });
 
+        // Mobile sidebar toggle (hamburger menu)
+        if (el.btnToggleSidebar) {
+            // Create overlay element
+            let sidebarOverlay = document.querySelector('.sidebar-overlay');
+            if (!sidebarOverlay) {
+                sidebarOverlay = document.createElement('div');
+                sidebarOverlay.className = 'sidebar-overlay';
+                document.body.appendChild(sidebarOverlay);
+            }
+
+            const closeMobileSidebar = () => {
+                el.topicsSidebar.classList.remove('mobile-open');
+                sidebarOverlay.classList.remove('show');
+            };
+
+            el.btnToggleSidebar.addEventListener('click', () => {
+                const isOpen = el.topicsSidebar.classList.contains('mobile-open');
+                if (isOpen) {
+                    closeMobileSidebar();
+                } else {
+                    el.topicsSidebar.classList.add('mobile-open');
+                    el.topicsSidebar.classList.remove('collapsed');
+                    sidebarOverlay.classList.add('show');
+                }
+            });
+
+            sidebarOverlay.addEventListener('click', closeMobileSidebar);
+        }
+
         // Topic change in editor auto-saves
         if (el.noteTopic) {
             el.noteTopic.addEventListener('change', scheduleAutoSave);
@@ -1679,16 +1713,18 @@
     async function init() {
         loadNotes();
         loadTopics();
-        // Restore backup folder handle
-        const savedHandle = await loadBackupHandle();
+        // Restore backup folder handle (only if File System API is available)
         let backupReady = false;
-        if (savedHandle) {
-            backupDirHandle = savedHandle;
-            backupReady = await verifyBackupAccess();
-            if (backupReady) {
-                await loadFromBackup();
-            } else {
-                backupDirHandle = null;
+        if (window.showDirectoryPicker) {
+            const savedHandle = await loadBackupHandle();
+            if (savedHandle) {
+                backupDirHandle = savedHandle;
+                backupReady = await verifyBackupAccess();
+                if (backupReady) {
+                    await loadFromBackup();
+                } else {
+                    backupDirHandle = null;
+                }
             }
         }
         bind();
@@ -1714,7 +1750,6 @@
             popupClose.addEventListener('click', () => {
                 hideBackupPopup();
             });
-        }
         }
     }
 

@@ -1249,23 +1249,18 @@
 
         // Build a printable element
         const printEl = document.createElement('div');
-        printEl.style.cssText = 'font-family: Segoe UI, Arial, sans-serif; color: #333; padding: 50px; position: relative; border: 15px solid #232f3e; box-sizing: border-box; background: #fff;';
-
-        // Orange accent inner border
-        const accent = document.createElement('div');
-        accent.style.cssText = 'position: absolute; top: 3px; left: 3px; right: 3px; bottom: 3px; border: 2px solid #ff9900; pointer-events: none;';
-        printEl.appendChild(accent);
+        printEl.style.cssText = 'font-family: Segoe UI, Arial, sans-serif; color: #333; padding: 40px 50px; position: relative; box-sizing: border-box; background: #fff; word-wrap: break-word; overflow-wrap: break-word;';
 
         // Title
         const titleEl = document.createElement('h1');
         titleEl.textContent = el.title.value || 'Untitled';
-        titleEl.style.cssText = 'font-size: 24px; color: #232f3e; text-transform: uppercase; letter-spacing: 2px; border-bottom: 4px solid #232f3e; padding-bottom: 10px; margin: 0 0 24px 0;';
+        titleEl.style.cssText = 'font-size: 22px; color: #232f3e; text-transform: uppercase; letter-spacing: 2px; border-bottom: 3px solid #ff9900; padding-bottom: 8px; margin: 0 0 20px 0; word-wrap: break-word;';
         printEl.appendChild(titleEl);
 
         // Body content â€” clone and flatten for PDF rendering
         const bodyClone = document.createElement('div');
         bodyClone.innerHTML = el.body.innerHTML;
-        bodyClone.style.cssText = 'font-size: 15px; line-height: 1.8; color: #333;';
+        bodyClone.style.cssText = 'font-size: 14px; line-height: 1.7; color: #333; word-wrap: break-word; overflow-wrap: break-word;';
 
         // Remove UI-only elements (resize handles, delete buttons, drag grips, placeholders)
         bodyClone.querySelectorAll('.resize-handle, .element-delete, .drag-placeholder, .drag-grip').forEach((e) => e.remove());
@@ -1361,8 +1356,32 @@
 
         // Style lists
         bodyClone.querySelectorAll('ul, ol').forEach((list) => {
-            list.style.paddingLeft = '28px';
-            list.style.margin = '10px 0';
+            list.style.paddingLeft = '24px';
+            list.style.margin = '8px 0';
+        });
+
+        // Style tables to fit page
+        bodyClone.querySelectorAll('table').forEach((table) => {
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+            table.style.fontSize = '12px';
+            table.style.tableLayout = 'fixed';
+            table.style.wordWrap = 'break-word';
+        });
+        bodyClone.querySelectorAll('td, th').forEach((cell) => {
+            cell.style.border = '1px solid #ccc';
+            cell.style.padding = '4px 6px';
+            cell.style.wordWrap = 'break-word';
+            cell.style.overflowWrap = 'break-word';
+        });
+
+        // Style code blocks to wrap
+        bodyClone.querySelectorAll('pre').forEach((pre) => {
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.wordWrap = 'break-word';
+            pre.style.overflowWrap = 'break-word';
+            pre.style.overflow = 'hidden';
+            pre.style.maxWidth = '100%';
         });
 
         // Ensure all text inside bodyClone has explicit dark color if not set
@@ -1392,45 +1411,46 @@
 
         // Footer
         const footer = document.createElement('div');
-        footer.textContent = 'CloudNotes \u2014 ' + new Date().toLocaleDateString();
-        footer.style.cssText = 'margin-top: 40px; text-align: center; font-size: 11px; color: #999; font-style: italic;';
+        footer.textContent = 'CloudNotes By Mahendar \u2014 ' + new Date().toLocaleDateString();
+        footer.style.cssText = 'margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; text-align: center; font-size: 10px; color: #999; font-style: italic;';
         printEl.appendChild(footer);
 
-        // Temporarily add to DOM for html2canvas to measure
+        // Add to DOM — visible for html2canvas to capture
         printEl.style.position = 'absolute';
         printEl.style.left = '0';
-        printEl.style.top = '0';
-        printEl.style.width = '210mm';
-        printEl.style.zIndex = '-9999';
-        printEl.style.opacity = '0';
+        printEl.style.top = window.scrollY + 'px';
+        printEl.style.width = '794px';
+        printEl.style.zIndex = '99999';
+        printEl.style.visibility = 'visible';
+        printEl.style.overflow = 'visible';
         document.body.appendChild(printEl);
 
-        const opt = {
-            margin: 0,
-            filename: (el.title.value || 'note').replace(/[^a-zA-Z0-9]/g, '_') + '.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                scrollX: 0,
-                scrollY: 0,
-                windowWidth: printEl.scrollWidth,
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] },
-        };
+        // Delay to ensure DOM is painted before capture
+        setTimeout(function () {
+            const opt = {
+                margin: [8, 0, 8, 0],
+                filename: (el.title.value || 'note').replace(/[^a-zA-Z0-9]/g, '_') + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: -window.scrollY,
+                    width: 794,
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] },
+            };
 
-        // Make visible for capture
-        printEl.style.opacity = '1';
-
-        html2pdf().set(opt).from(printEl).save().then(function () {
-            document.body.removeChild(printEl);
-            showToast('PDF exported!');
-        }).catch(function () {
-            document.body.removeChild(printEl);
-            showToast('PDF export failed');
-        });
+            html2pdf().set(opt).from(printEl).save().then(function () {
+                document.body.removeChild(printEl);
+                showToast('PDF exported!');
+            }).catch(function () {
+                if (printEl.parentNode) document.body.removeChild(printEl);
+                showToast('PDF export failed');
+            });
+        }, 300);
     }
 
     // ===== Helpers =====

@@ -1323,12 +1323,6 @@
 
         wrapper.appendChild(bodyClone);
 
-        // Footer
-        var footer = document.createElement('div');
-        footer.textContent = 'CloudNotes By Mahendar \u2014 ' + new Date().toLocaleDateString();
-        footer.style.cssText = 'margin-top:30px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:10px;color:#999;font-style:italic;';
-        wrapper.appendChild(footer);
-
         // Insert at the VERY TOP of body so it's in-flow and visible
         document.body.insertBefore(wrapper, document.body.firstChild);
         window.scrollTo(0, 0);

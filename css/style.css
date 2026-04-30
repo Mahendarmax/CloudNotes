@@ -635,7 +635,7 @@ body {
     left: 0;
     color: var(--orange);
     font-weight: bold;
-    font-size: 14px;
+    font-size: inherit;
     line-height: inherit;
     top: 0;
 }

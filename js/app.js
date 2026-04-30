@@ -1250,11 +1250,12 @@
         var noteTitle = el.title.value || 'Untitled';
         var safeName = noteTitle.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
 
-        // Create a wrapper in normal document flow (NOT fixed/absolute)
+        // Save current scroll
+        var savedScroll = window.scrollY;
+
+        // Create wrapper in NORMAL document flow — no absolute, no fixed, no off-screen
         var wrapper = document.createElement('div');
-        wrapper.id = 'pdfExportWrapper';
-        wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;background:#fff;padding:40px 45px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;z-index:-1;';
-        document.body.appendChild(wrapper);
+        wrapper.style.cssText = 'width:794px;background:#fff;padding:40px 50px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;';
 
         // Title
         var titleEl = document.createElement('div');
@@ -1262,16 +1263,16 @@
         titleEl.style.cssText = 'font-size:22px;font-weight:bold;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:3px solid #ff9900;padding-bottom:8px;margin-bottom:20px;word-wrap:break-word;';
         wrapper.appendChild(titleEl);
 
-        // Clone the note body content exactly as-is
+        // Clone the note body exactly as-is
         var bodyClone = el.body.cloneNode(true);
         bodyClone.removeAttribute('contenteditable');
         bodyClone.removeAttribute('id');
         bodyClone.style.cssText = 'font-size:14px;line-height:1.7;color:#222;word-wrap:break-word;overflow-wrap:break-word;';
 
-        // Remove editor UI elements from clone
+        // Remove editor UI elements
         bodyClone.querySelectorAll('.resize-handle, .element-delete, .drag-placeholder, .drag-grip').forEach(function(e) { e.remove(); });
 
-        // Replace video elements with placeholder text
+        // Replace video with placeholder
         bodyClone.querySelectorAll('video').forEach(function(v) {
             var src = (v.querySelector('source') || v).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
@@ -1281,7 +1282,7 @@
             v.replaceWith(ph);
         });
 
-        // Replace audio elements
+        // Replace audio
         bodyClone.querySelectorAll('audio').forEach(function(a) {
             var src = (a.querySelector('source') || a).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
@@ -1300,7 +1301,7 @@
             f.replaceWith(ph);
         });
 
-        // Ensure images are sized properly
+        // Ensure images are sized
         bodyClone.querySelectorAll('img').forEach(function(img) {
             img.style.maxWidth = '100%';
             img.style.height = 'auto';
@@ -1314,7 +1315,11 @@
         footer.style.cssText = 'margin-top:30px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:10px;color:#999;font-style:italic;';
         wrapper.appendChild(footer);
 
-        // Wait for images
+        // Insert at the VERY TOP of body so it's in-flow and visible
+        document.body.insertBefore(wrapper, document.body.firstChild);
+        window.scrollTo(0, 0);
+
+        // Wait for images to load
         var imgs = Array.from(bodyClone.querySelectorAll('img'));
         var imgPromises = imgs.map(function(img) {
             if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -1326,11 +1331,6 @@
         });
 
         Promise.all(imgPromises).then(function() {
-            // Move wrapper into view just before capture
-            wrapper.style.left = '0';
-            wrapper.style.top = window.scrollY + 'px';
-            wrapper.style.zIndex = '99999';
-
             setTimeout(function() {
                 html2pdf().set({
                     margin: 10,
@@ -1340,21 +1340,21 @@
                         scale: 2,
                         useCORS: true,
                         allowTaint: true,
-                        logging: false,
-                        scrollY: 0,
-                        windowWidth: 794
+                        logging: false
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'] }
                 }).from(wrapper).save().then(function() {
                     wrapper.remove();
+                    window.scrollTo(0, savedScroll);
                     showToast('PDF exported!');
                 }).catch(function(err) {
                     console.error('PDF export error:', err);
                     wrapper.remove();
+                    window.scrollTo(0, savedScroll);
                     showToast('PDF export failed');
                 });
-            }, 300);
+            }, 500);
         });
     }
 

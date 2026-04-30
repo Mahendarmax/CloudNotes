@@ -1365,6 +1365,29 @@
             list.style.margin = '10px 0';
         });
 
+        // Ensure all text inside bodyClone has explicit dark color if not set
+        bodyClone.querySelectorAll('*').forEach((node) => {
+            if (!node.style.color) {
+                node.style.color = '#333';
+            }
+        });
+        // Convert legacy <font> tags to spans with inline styles
+        bodyClone.querySelectorAll('font').forEach((font) => {
+            const span = document.createElement('span');
+            if (font.getAttribute('size')) {
+                const sizeMap = { '1': '10px', '2': '13px', '3': '16px', '4': '18px', '5': '24px', '6': '32px', '7': '48px' };
+                span.style.fontSize = sizeMap[font.getAttribute('size')] || '16px';
+            }
+            if (font.getAttribute('color')) {
+                span.style.color = font.getAttribute('color');
+            }
+            if (font.getAttribute('face')) {
+                span.style.fontFamily = font.getAttribute('face');
+            }
+            span.innerHTML = font.innerHTML;
+            font.replaceWith(span);
+        });
+
         printEl.appendChild(bodyClone);
 
         // Footer
@@ -1373,21 +1396,33 @@
         footer.style.cssText = 'margin-top: 40px; text-align: center; font-size: 11px; color: #999; font-style: italic;';
         printEl.appendChild(footer);
 
-        // Temporarily add to DOM so html2canvas can measure it
-        printEl.style.position = 'fixed';
-        printEl.style.left = '-9999px';
+        // Temporarily add to DOM for html2canvas to measure
+        printEl.style.position = 'absolute';
+        printEl.style.left = '0';
         printEl.style.top = '0';
         printEl.style.width = '210mm';
+        printEl.style.zIndex = '-9999';
+        printEl.style.opacity = '0';
         document.body.appendChild(printEl);
 
         const opt = {
             margin: 0,
             filename: (el.title.value || 'note').replace(/[^a-zA-Z0-9]/g, '_') + '.pdf',
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: printEl.scrollWidth,
+            },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+            pagebreak: { mode: ['css', 'legacy'] },
         };
+
+        // Make visible for capture
+        printEl.style.opacity = '1';
 
         html2pdf().set(opt).from(printEl).save().then(function () {
             document.body.removeChild(printEl);

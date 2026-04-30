@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudNotes By Mahendar — Your Notes, Always Saved</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -185,6 +185,19 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <script src="js/app.js?v=2"></script>
+    <!-- Backup folder popup -->
+    <div class="backup-popup" id="backupPopup">
+        <div class="backup-popup-content">
+            <i class="fas fa-folder-open backup-popup-icon"></i>
+            <div class="backup-popup-text">
+                <strong>Backup not configured</strong>
+                <span>Set a backup folder to auto-save your notes</span>
+            </div>
+            <button class="backup-popup-btn" id="backupPopupBtn">Configure</button>
+            <button class="backup-popup-close" id="backupPopupClose" title="Dismiss">&times;</button>
+        </div>
+    </div>
+
+    <script src="js/app.js?v=4"></script>
 </body>
 </html>

@@ -218,6 +218,7 @@
             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
             backupDirHandle = handle;
             saveBackupHandle(handle);
+            hideBackupPopup();
 
             // Check if backup folder has existing data (e.g. coming from another PC)
             let hasExistingBackup = false;
@@ -1648,28 +1649,72 @@
         }
     }
 
+    // ===== Backup Popup =====
+    function showBackupPopup() {
+        const popup = document.getElementById('backupPopup');
+        if (popup && !popup.classList.contains('show')) {
+            setTimeout(() => popup.classList.add('show'), 500);
+        }
+    }
+
+    function hideBackupPopup() {
+        const popup = document.getElementById('backupPopup');
+        if (popup) popup.classList.remove('show');
+    }
+
+    async function verifyBackupAccess() {
+        if (!backupDirHandle) return false;
+        try {
+            const perm = await backupDirHandle.queryPermission({ mode: 'readwrite' });
+            if (perm === 'granted') return true;
+            // Try requesting permission silently — browser may auto-grant
+            const req = await backupDirHandle.requestPermission({ mode: 'readwrite' });
+            return req === 'granted';
+        } catch (_) {
+            return false;
+        }
+    }
+
     // ===== Init =====
     async function init() {
         loadNotes();
         loadTopics();
         // Restore backup folder handle
         const savedHandle = await loadBackupHandle();
+        let backupReady = false;
         if (savedHandle) {
             backupDirHandle = savedHandle;
-            await loadFromBackup();
+            backupReady = await verifyBackupAccess();
+            if (backupReady) {
+                await loadFromBackup();
+            } else {
+                backupDirHandle = null;
+            }
         }
         bind();
         renderTopics();
         updateTopicSelect();
         render();
 
-        // Auto-prompt to pick backup folder if not set
-        if (!backupDirHandle) {
-            setTimeout(() => {
-                if (confirm('Set a backup folder to auto-save all notes and topics?\n\nSelect the "backup" folder inside your project.')) {
-                    pickBackupFolder();
-                }
-            }, 500);
+        // Show popup if backup folder is not configured or permission lost
+        if (!backupReady) {
+            showBackupPopup();
+        }
+
+        // Bind popup buttons
+        const popupBtn = document.getElementById('backupPopupBtn');
+        const popupClose = document.getElementById('backupPopupClose');
+        if (popupBtn) {
+            popupBtn.addEventListener('click', () => {
+                hideBackupPopup();
+                pickBackupFolder();
+            });
+        }
+        if (popupClose) {
+            popupClose.addEventListener('click', () => {
+                hideBackupPopup();
+            });
+        }
         }
     }
 

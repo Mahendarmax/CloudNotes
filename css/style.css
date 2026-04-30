@@ -635,6 +635,9 @@ body {
     left: 0;
     color: var(--orange);
     font-weight: bold;
+    font-size: 14px;
+    line-height: inherit;
+    top: 0;
 }
 .modal-body ol { padding-left: 28px; margin: 10px 0; }
 .modal-body a { color: var(--orange-dark); }

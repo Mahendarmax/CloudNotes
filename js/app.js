@@ -1515,6 +1515,199 @@
         });
     }
 
+    // ===== Draw / Sketch (inline overlay on note body) =====
+    (function initDraw() {
+        const drawOverlay = document.getElementById('drawOverlayInline');
+        const canvas      = document.getElementById('drawCanvas');
+        const colorPick   = document.getElementById('drawColorPicker');
+        const sizeSlider  = document.getElementById('drawSizeSlider');
+        const btnPen      = document.getElementById('drawToolPen');
+        const btnEraser   = document.getElementById('drawToolEraser');
+        const btnBg       = document.getElementById('drawBgToggle');
+        const btnClear    = document.getElementById('drawClearBtn');
+        const btnInsert   = document.getElementById('drawInsertBtn');
+        const btnClose    = document.getElementById('drawCloseBtn');
+        const btnOpen     = document.getElementById('btnOpenDraw');
+
+        if (!canvas || !drawOverlay) return;
+
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let tool = 'pen';
+        let transparent = true; // canvas bg is transparent by default so content shows through
+
+        function syncSize() {
+            const w = drawOverlay.clientWidth;
+            const h = drawOverlay.clientHeight;
+            // Preserve drawing when resizing
+            const tmp = document.createElement('canvas');
+            tmp.width = canvas.width; tmp.height = canvas.height;
+            tmp.getContext('2d').drawImage(canvas, 0, 0);
+            canvas.width = w;
+            canvas.height = h;
+            if (!transparent) {
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillRect(0, 0, w, h);
+            }
+            ctx.drawImage(tmp, 0, 0);
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const src = e.touches ? e.touches[0] : e;
+            return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+        }
+
+        function startDraw(e) {
+            // Don't start drawing if clicking on toolbar
+            if (e.target.closest && e.target.closest('#drawFloatToolbar')) return;
+            e.preventDefault();
+            drawing = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function doDraw(e) {
+            if (!drawing) return;
+            if (e.target.closest && e.target.closest('#drawFloatToolbar')) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.lineWidth  = tool === 'eraser' ? parseInt(sizeSlider.value) * 3 : parseInt(sizeSlider.value);
+            ctx.lineCap    = 'round';
+            ctx.lineJoin   = 'round';
+            if (tool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.strokeStyle = 'rgba(0,0,0,1)';
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = colorPick.value;
+            }
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function stopDraw() {
+            if (!drawing) return;
+            drawing = false;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.beginPath();
+        }
+
+        // Canvas events
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', doDraw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseleave', stopDraw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', doDraw, { passive: false });
+        canvas.addEventListener('touchend', stopDraw);
+
+        // Tool buttons
+        btnPen.addEventListener('click', () => {
+            tool = 'pen';
+            btnPen.classList.add('active');
+            btnEraser.classList.remove('active');
+            canvas.style.cursor = 'crosshair';
+        });
+        btnEraser.addEventListener('click', () => {
+            tool = 'eraser';
+            btnEraser.classList.add('active');
+            btnPen.classList.remove('active');
+            canvas.style.cursor = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Crect x='2' y='2' width='16' height='16' rx='3' fill='%23fff' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E\") 10 10, cell";
+        });
+        btnBg.addEventListener('click', () => {
+            transparent = !transparent;
+            btnBg.classList.toggle('active', !transparent);
+            btnBg.title = transparent ? 'Add white background' : 'Remove background (transparent)';
+            if (!transparent) {
+                // Add semi-transparent white bg under current drawing
+                const tmp = document.createElement('canvas');
+                tmp.width = canvas.width; tmp.height = canvas.height;
+                tmp.getContext('2d').drawImage(canvas, 0, 0);
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        });
+        btnClear.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!transparent) {
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        });
+
+        // Open draw mode
+        btnOpen.addEventListener('click', () => {
+            drawOverlay.classList.add('active');
+            el.body.contentEditable = 'false';
+            syncSize();
+            btnOpen.classList.add('active');
+            showToast('Draw mode — click Exit when done');
+        });
+
+        // Close / exit draw mode
+        btnClose.addEventListener('click', () => {
+            drawOverlay.classList.remove('active');
+            el.body.contentEditable = 'true';
+            btnOpen.classList.remove('active');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Insert drawing into note as image
+        btnInsert.addEventListener('click', () => {
+            if (canvas.width === 0 || canvas.height === 0) return;
+            const dataUrl = canvas.toDataURL('image/png');
+            // Close draw mode first
+            drawOverlay.classList.remove('active');
+            el.body.contentEditable = 'true';
+            btnOpen.classList.remove('active');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Insert as resizable image
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = 'Drawing';
+            img.style.cssText = 'max-width:100%;height:auto;display:block;margin:8px 0;border-radius:4px;';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'resizable-wrapper';
+            wrapper.contentEditable = 'false';
+            const grip = document.createElement('div');
+            grip.className = 'drag-grip';
+            grip.title = 'Drag to move';
+            grip.innerHTML = '<i class="fas fa-grip-vertical"></i>';
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle';
+            const del = document.createElement('button');
+            del.className = 'element-delete';
+            del.innerHTML = '&times;';
+            del.title = 'Remove';
+            del.addEventListener('click', (ev) => { ev.stopPropagation(); wrapper.remove(); scheduleAutoSave(); });
+            wrapper.appendChild(grip);
+            wrapper.appendChild(img);
+            wrapper.appendChild(handle);
+            wrapper.appendChild(del);
+            initResize(wrapper, handle);
+            initDrag(wrapper, grip);
+            insertNodeAtCursor(wrapper);
+            pushUndo();
+            scheduleAutoSave();
+            showToast('Drawing inserted!');
+        });
+
+        window.addEventListener('resize', () => {
+            if (drawOverlay.classList.contains('active')) syncSize();
+        });
+    })();
+
+    // ===== Helpers =====
+
     // ===== Helpers =====
     function generateId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

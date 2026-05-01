@@ -1267,7 +1267,7 @@
         updateStats();
     }
 
-    // ===== Export Note as PDF (direct download, isolated iframe render) =====
+    // ===== Export Note as PDF (window.print from note JSON data) =====
     function exportNotePdf() {
         var note = notes.find(function(n) { return n.id === editingId; });
         var noteTitle = (note && note.title) ? note.title : (el.title.value || 'Untitled');
@@ -1275,9 +1275,7 @@
 
         if (!noteTitle.trim() && !noteBody.trim()) { showToast('Nothing to export'); return; }
 
-        showToast('Generating PDF...');
-
-        // ---- Clean the note body HTML ----
+        // Clean the note body
         var parser = new DOMParser();
         var doc = parser.parseFromString('<div id="r">' + noteBody + '</div>', 'text/html');
         var root = doc.getElementById('r');
@@ -1298,7 +1296,7 @@
             var ph = doc.createElement('div'); ph.className='media-ph'; ph.textContent='🌐 Embedded: '+(f.getAttribute('src')||''); f.replaceWith(ph);
         });
 
-        // Strip dark bg / near-white text (editor dark-theme artifacts)
+        // Strip dark bg / near-white text artifacts
         root.querySelectorAll('[style]').forEach(function(n){
             var lum = function(css){ var m=(css||'').match(/\d+/g); return m?(+m[0]*299+ +m[1]*587+ +m[2]*114)/1000:128; };
             if(n.style.backgroundColor && lum(n.style.backgroundColor)<60)  n.style.backgroundColor='';
@@ -1306,72 +1304,49 @@
             if(n.style.width && parseInt(n.style.width)>700 && n.tagName!=='IMG') n.style.width='100%';
         });
 
-        var cleanBody = root.innerHTML;
-
-        // ---- Build complete HTML document for the iframe ----
         var css = [
-            '*{box-sizing:border-box;margin:0;padding:0;}',
-            'body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.7;color:#222;background:#fff;padding:40px 50px 50px;}',
+            '@page{size:A4 portrait;margin:15mm;}',
+            '*{box-sizing:border-box;}',
+            'body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.7;color:#222;background:#fff;margin:0;padding:0;}',
             '.note-title{font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:4px solid #232f3e;padding-bottom:8px;margin-bottom:4px;word-break:break-word;}',
             '.note-accent{height:3px;background:#ff9900;border-radius:2px;margin-bottom:28px;}',
             'h1,h2,h3,h4,h5,h6{color:#232f3e;page-break-after:avoid;}',
             'h2{font-size:18px;border-bottom:2px solid #ff9900;padding-bottom:4px;margin:20px 0 10px;}',
             'h3{font-size:15px;margin:16px 0 8px;}',
             'p{margin:6px 0;page-break-inside:avoid;}',
-            'ul,ol{margin:8px 0 8px 20px;}',
-            'li{margin-bottom:4px;page-break-inside:avoid;}',
+            'ul,ol{margin:8px 0 8px 20px;}li{margin-bottom:4px;page-break-inside:avoid;}',
             'table{width:100%;border-collapse:collapse;font-size:12px;margin:14px 0;table-layout:fixed;page-break-inside:auto;}',
-            'thead{display:table-header-group;}',
-            'tr{page-break-inside:avoid;}',
-            'th{background:#232f3e!important;color:#fff!important;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px;padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;}',
-            'td{padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;color:#222;word-break:break-word;overflow-wrap:break-word;}',
+            'thead{display:table-header-group;}tr{page-break-inside:avoid;}',
+            'th{background:#232f3e!important;color:#fff!important;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px;padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
+            'td{padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;color:#222;word-break:break-word;}',
             'tbody tr:nth-child(even) td{background:#f8f9fa;}',
-            'pre{background:#1e1e2e!important;color:#cdd6f4!important;border:1px solid #45475a;border-radius:6px;padding:12px 16px;font-family:Consolas,"Courier New",monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:10px 0;page-break-inside:avoid;}',
+            'pre{background:#1e1e2e!important;color:#cdd6f4!important;border:1px solid #45475a;border-radius:6px;padding:12px 16px;font-family:Consolas,"Courier New",monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:10px 0;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
             'code{font-family:Consolas,"Courier New",monospace;font-size:12px;}',
             'blockquote{border-left:4px solid #ff9900;padding-left:14px;color:#555;margin:10px 0;font-style:italic;page-break-inside:avoid;}',
-            'mark{background:#ffe066!important;color:#222!important;padding:1px 3px;border-radius:2px;}',
+            'mark{background:#ffe066!important;color:#222!important;padding:1px 3px;border-radius:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
             'a{color:#ec7211;text-decoration:underline;}',
             'hr{border:none;border-top:3px solid #ff9900;margin:18px 0;}',
-            'img{max-width:100%;height:auto;display:block;margin:8px 0;page-break-inside:avoid;border-radius:4px;}',
+            'img{max-width:100%;height:auto;display:block;margin:8px 0;page-break-inside:avoid;}',
             '.media-ph{padding:8px 12px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 4px 4px 0;color:#555;font-size:12px;margin:8px 0;}',
             '.resizable-wrapper{position:static!important;width:auto!important;display:block;}',
             '.resize-handle,.element-delete,.drag-grip{display:none!important;}',
         ].join('');
 
-        var fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>'
+        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + escapeHtml(noteTitle) + '</title>'
+            + '<style>' + css + '</style></head><body>'
             + '<div class="note-title">' + escapeHtml(noteTitle) + '</div>'
             + '<div class="note-accent"></div>'
-            + cleanBody
+            + root.innerHTML
             + '</body></html>';
 
-        // ---- Render in a hidden iframe (isolated from app CSS) ----
-        var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1px;border:0;visibility:hidden;';
-        document.body.appendChild(iframe);
+        var win = window.open('', '_blank', 'width=900,height=700');
+        if (!win) { showToast('Allow popups to export PDF'); return; }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
 
-        var iDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iDoc.open(); iDoc.write(fullHtml); iDoc.close();
-
-        var safeName = noteTitle.replace(/[^a-zA-Z0-9\-_ ]/g,'_').trim() + '.pdf';
-
-        // Give iframe a moment to render, then export
-        setTimeout(function() {
-            html2pdf().set({
-                margin:      [10, 10, 10, 10],
-                filename:    safeName,
-                image:       { type: 'jpeg', quality: 0.97 },
-                html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false },
-                jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:   { mode: ['css','legacy'], avoid: ['tr','thead','img','pre','blockquote','h2','h3','li'] }
-            }).from(iDoc.body).save().then(function(){
-                iframe.remove();
-                showToast('PDF downloaded!');
-            }).catch(function(err){
-                console.error('PDF export error:', err);
-                iframe.remove();
-                showToast('PDF export failed');
-            });
-        }, 300);
+        win.onload = function() { setTimeout(function(){ win.focus(); win.print(); }, 300); };
+        setTimeout(function(){ if(win && !win.closed){ win.focus(); win.print(); } }, 1000);
     }
 
     // ===== Draw / Sketch (inline overlay on note body) =====

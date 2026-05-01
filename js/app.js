@@ -1652,9 +1652,17 @@
             scheduleAutoSave();
         });
 
-        // Highlight color picker
+        // Highlight color picker — save selection before picker opens, apply on color change
+        el.highlightColorPicker.addEventListener('focus', () => {
+            saveSelection();
+        });
         el.highlightColorPicker.addEventListener('input', () => {
             el.highlightColorIndicator.style.background = el.highlightColorPicker.value;
+        });
+        el.highlightColorPicker.addEventListener('change', () => {
+            el.highlightColorIndicator.style.background = el.highlightColorPicker.value;
+            restoreSelection();
+            toggleHighlight();
         });
 
         // Insert code block

@@ -1,10 +1,12 @@
 [
   {
     "id": "mokegq8gooehn",
-    "name": "EC2"
+    "name": "EC2",
+    "pinned": false
   },
   {
     "id": "moml02jeqzu15",
-    "name": "RoadMap"
+    "name": "RoadMap",
+    "pinned": true
   }
 ]

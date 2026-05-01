@@ -1345,8 +1345,8 @@
         win.document.write(html);
         win.document.close();
 
-        win.onload = function() { setTimeout(function(){ win.focus(); win.print(); }, 300); };
-        setTimeout(function(){ if(win && !win.closed){ win.focus(); win.print(); } }, 1000);
+        win.onload = function() { setTimeout(function(){ win.focus(); win.print(); win.onafterprint = function(){ win.close(); }; }, 300); };
+        setTimeout(function(){ if(win && !win.closed){ win.focus(); win.print(); win.onafterprint = function(){ win.close(); }; } }, 1000);
     }
 
     // ===== Draw / Sketch (inline overlay on note body) =====

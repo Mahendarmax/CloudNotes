@@ -1267,21 +1267,38 @@
         // Save current scroll
         var savedScroll = window.scrollY;
 
-        // Create wrapper in NORMAL document flow — no absolute, no fixed, no off-screen
+        // A4 = 210mm x 297mm. With 10mm margins => usable 190mm x 277mm.
+        // At 96dpi: 190mm = ~718px. Use that as wrapper width.
+        var pdfContentWidth = 718;
+
+        // Create wrapper in NORMAL document flow
         var wrapper = document.createElement('div');
-        wrapper.style.cssText = 'width:794px;background:#fff;padding:40px 50px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;';
+        wrapper.style.cssText = 'width:' + pdfContentWidth + 'px;max-width:' + pdfContentWidth + 'px;background:#fff;padding:30px 36px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;overflow:hidden;';
+
+        // Inject a style block to force all content to fit
+        var styleTag = document.createElement('style');
+        styleTag.textContent = '' +
+            '#pdf-export-wrapper * { max-width: 100% !important; box-sizing: border-box !important; }' +
+            '#pdf-export-wrapper table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; word-break: break-word !important; overflow-wrap: break-word !important; font-size: 11px !important; }' +
+            '#pdf-export-wrapper td, #pdf-export-wrapper th { word-break: break-word !important; overflow-wrap: break-word !important; overflow: hidden !important; padding: 5px 6px !important; border: 1px solid #bbb !important; vertical-align: top !important; }' +
+            '#pdf-export-wrapper img { max-width: 100% !important; height: auto !important; }' +
+            '#pdf-export-wrapper pre { white-space: pre-wrap !important; word-break: break-word !important; overflow: hidden !important; max-width: 100% !important; }' +
+            '#pdf-export-wrapper div, #pdf-export-wrapper p, #pdf-export-wrapper span, #pdf-export-wrapper code, #pdf-export-wrapper blockquote { overflow-wrap: break-word !important; word-break: break-word !important; }' +
+            '#pdf-export-wrapper ul, #pdf-export-wrapper ol { padding-left: 20px !important; }';
+        wrapper.appendChild(styleTag);
+        wrapper.id = 'pdf-export-wrapper';
 
         // Title
         var titleEl = document.createElement('div');
         titleEl.textContent = noteTitle;
-        titleEl.style.cssText = 'font-size:22px;font-weight:bold;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:3px solid #ff9900;padding-bottom:8px;margin-bottom:20px;word-wrap:break-word;';
+        titleEl.style.cssText = 'font-size:20px;font-weight:bold;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:3px solid #ff9900;padding-bottom:8px;margin-bottom:18px;word-wrap:break-word;';
         wrapper.appendChild(titleEl);
 
         // Clone the note body exactly as-is
         var bodyClone = el.body.cloneNode(true);
         bodyClone.removeAttribute('contenteditable');
         bodyClone.removeAttribute('id');
-        bodyClone.style.cssText = 'font-size:14px;line-height:1.7;color:#222;word-wrap:break-word;overflow-wrap:break-word;';
+        bodyClone.style.cssText = 'font-size:13px;line-height:1.6;color:#222;word-wrap:break-word;overflow-wrap:break-word;overflow:hidden;';
 
         // Remove editor UI elements
         bodyClone.querySelectorAll('.resize-handle, .element-delete, .drag-placeholder, .drag-grip').forEach(function(e) { e.remove(); });
@@ -1315,10 +1332,13 @@
             f.replaceWith(ph);
         });
 
-        // Ensure images are sized
-        bodyClone.querySelectorAll('img').forEach(function(img) {
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
+        // Strip any inline width/min-width that exceeds container
+        bodyClone.querySelectorAll('[style]').forEach(function(node) {
+            if (node.style.width) {
+                var w = parseInt(node.style.width, 10);
+                if (w > pdfContentWidth - 72) { node.style.width = '100%'; }
+            }
+            if (node.style.minWidth) { node.style.minWidth = '0'; }
         });
 
         wrapper.appendChild(bodyClone);
@@ -1341,17 +1361,19 @@
         Promise.all(imgPromises).then(function() {
             setTimeout(function() {
                 html2pdf().set({
-                    margin: 10,
+                    margin: [10, 10, 10, 10],
                     filename: safeName,
-                    image: { type: 'jpeg', quality: 0.98 },
+                    image: { type: 'jpeg', quality: 0.95 },
                     html2canvas: {
                         scale: 2,
                         useCORS: true,
                         allowTaint: true,
-                        logging: false
+                        logging: false,
+                        width: pdfContentWidth,
+                        windowWidth: pdfContentWidth
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] }
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th', '.avoid-break'] }
                 }).from(wrapper).save().then(function() {
                     wrapper.remove();
                     window.scrollTo(0, savedScroll);

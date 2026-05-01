@@ -1427,13 +1427,12 @@
             }
         });
 
-        // --- Build wrapper (hidden off-screen, not fixed overlay) ---
+        // --- Build wrapper (position:fixed so html2canvas can capture it) ---
         var wrapper = document.createElement('div');
         wrapper.id = 'pdf-export-wrapper';
-        // A4 at 96dpi = 794px wide. Margins 15mm each side = ~113px. Content width = ~681px.
-        // We use 680px content width to match A4 with 15mm margins.
+        // A4 at 96dpi = 794px wide. Margins 15mm each side ≈ 113px. Content = 680px.
         var contentWidth = 680;
-        wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + contentWidth + 'px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif;box-sizing:border-box;z-index:-1;';
+        wrapper.style.cssText = 'position:fixed;left:0;top:0;width:' + contentWidth + 'px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif;box-sizing:border-box;z-index:999999;overflow:visible;';
 
         // Title bar (matches editor: dark border bottom, uppercase, bold)
         var titleBar = document.createElement('div');

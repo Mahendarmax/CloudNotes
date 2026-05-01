@@ -1263,51 +1263,111 @@
 
         var noteTitle = el.title.value || 'Untitled';
         var safeName = noteTitle.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+        var savedScroll = window.scrollY;
 
         // Clone the note body
         var bodyClone = el.body.cloneNode(true);
         bodyClone.removeAttribute('contenteditable');
         bodyClone.removeAttribute('id');
+        bodyClone.removeAttribute('class');
 
-        // Remove editor UI elements
+        // Remove editor-only UI
         bodyClone.querySelectorAll('.resize-handle, .element-delete, .drag-placeholder, .drag-grip').forEach(function(e) { e.remove(); });
 
-        // Replace video/audio/iframe with placeholders
+        // --- Replace media with styled placeholders ---
         bodyClone.querySelectorAll('video').forEach(function(v) {
             var src = (v.querySelector('source') || v).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
             var ph = document.createElement('div');
-            ph.textContent = '\uD83C\uDFAC Video: ' + name;
-            ph.style.cssText = 'padding:8px 12px;background:#f0f0f0;border:1px solid #ccc;border-radius:5px;color:#555;font-size:12px;margin:8px 0;';
+            ph.innerHTML = '<span style="font-size:16px;">&#127916;</span> <strong>Video:</strong> ' + escapeHtml(name);
+            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;';
             v.replaceWith(ph);
         });
         bodyClone.querySelectorAll('audio').forEach(function(a) {
             var src = (a.querySelector('source') || a).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
             var ph = document.createElement('div');
-            ph.textContent = '\uD83D\uDD0A Audio: ' + name;
-            ph.style.cssText = 'padding:8px 12px;background:#f0f0f0;border:1px solid #ccc;border-radius:5px;color:#555;font-size:12px;margin:8px 0;';
+            ph.innerHTML = '<span style="font-size:16px;">&#128266;</span> <strong>Audio:</strong> ' + escapeHtml(name);
+            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;';
             a.replaceWith(ph);
         });
         bodyClone.querySelectorAll('iframe').forEach(function(f) {
             var src = f.getAttribute('src') || '';
             var ph = document.createElement('div');
-            ph.textContent = '\uD83C\uDFAC Embedded: ' + src;
-            ph.style.cssText = 'padding:8px 12px;background:#f0f0f0;border:1px solid #ccc;border-radius:5px;color:#555;font-size:12px;margin:8px 0;word-break:break-all;';
+            ph.innerHTML = '<span style="font-size:16px;">&#127760;</span> <strong>Embedded:</strong> ' + escapeHtml(src);
+            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;word-break:break-all;';
             f.replaceWith(ph);
         });
 
-        // Strip explicit widths from tables/cells so table-layout:fixed works
+        // --- Fix images ---
+        bodyClone.querySelectorAll('img').forEach(function(img) {
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            img.style.margin = '8px 0';
+        });
+
+        // --- Fix tables: strip hardcoded widths, apply inline styles ---
         bodyClone.querySelectorAll('table').forEach(function(t) {
             t.removeAttribute('width');
+            t.style.cssText = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin:12px 0;background:#fff;';
             t.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
         });
-        bodyClone.querySelectorAll('td, th').forEach(function(c) {
-            c.removeAttribute('width');
-            if (c.style.width) c.style.removeProperty('width');
-            if (c.style.minWidth) c.style.removeProperty('min-width');
+        bodyClone.querySelectorAll('th').forEach(function(th) {
+            th.removeAttribute('width');
+            th.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:8px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#232f3e;color:#fff;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:1px;';
         });
-        // Strip oversized inline widths
+        bodyClone.querySelectorAll('td').forEach(function(td) {
+            td.removeAttribute('width');
+            td.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:8px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#fff;color:#333;';
+        });
+        // Alternating row color
+        bodyClone.querySelectorAll('tr').forEach(function(tr, i) {
+            if (i % 2 === 0) {
+                tr.querySelectorAll('td').forEach(function(td) { td.style.background = '#f8f9fa'; });
+            }
+        });
+
+        // --- Fix headings ---
+        bodyClone.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(function(h) {
+            h.style.color = '#232f3e';
+            h.style.background = 'transparent';
+        });
+        bodyClone.querySelectorAll('h2').forEach(function(h2) {
+            h2.style.borderBottom = '2px solid #ff9900';
+            h2.style.paddingBottom = '4px';
+            h2.style.marginTop = '14px';
+        });
+
+        // --- Fix code blocks ---
+        bodyClone.querySelectorAll('pre').forEach(function(pre) {
+            pre.style.cssText = 'background:#1e1e2e;color:#cdd6f4;border:1px solid #45475a;border-radius:8px;padding:14px 18px;font-family:Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:12px 0;overflow:hidden;max-width:100%;';
+        });
+
+        // --- Fix blockquotes ---
+        bodyClone.querySelectorAll('blockquote').forEach(function(bq) {
+            bq.style.cssText = 'border-left:4px solid #ff9900;padding-left:16px;color:#555;margin:12px 0;font-style:italic;background:transparent;';
+        });
+
+        // --- Fix links ---
+        bodyClone.querySelectorAll('a').forEach(function(a) {
+            a.style.color = '#ec7211';
+            a.style.textDecoration = 'underline';
+            a.style.background = 'transparent';
+        });
+
+        // --- Fix marks ---
+        bodyClone.querySelectorAll('mark').forEach(function(m) {
+            m.style.cssText = 'background:#ffe066;color:#333;padding:1px 3px;border-radius:2px;';
+        });
+
+        // --- Fix lists ---
+        bodyClone.querySelectorAll('li').forEach(function(li) {
+            li.style.color = '#333';
+            li.style.background = 'transparent';
+        });
+
+        // --- Strip oversized inline widths ---
         bodyClone.querySelectorAll('[style]').forEach(function(node) {
             if (node.style.width) {
                 var w = parseInt(node.style.width, 10);
@@ -1316,106 +1376,105 @@
             if (node.style.minWidth) node.style.minWidth = '0';
         });
 
-        // Build standalone HTML replicating the exact editor design
-        var pdfCSS =
-            '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
-            'body { width: 710px; margin: 0; padding: 0; font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; background: #ffffff; color: #333; }' +
-            // Outer frame mimics the modal border
-            '.pdf-page { background: #ffffff; border: 8px solid #232f3e; position: relative; }' +
-            '.pdf-page::before { content: ""; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px; border: 2px solid #ff9900; pointer-events: none; z-index: 0; }' +
-            // Title bar
-            '.pdf-header { padding: 18px 32px 12px; border-bottom: 4px solid #232f3e; margin: 6px 6px 0; position: relative; z-index: 1; }' +
-            '.pdf-title { font-size: 22px; font-weight: 700; color: #232f3e; text-transform: uppercase; letter-spacing: 2px; word-wrap: break-word; }' +
-            // Body content
-            '.pdf-body { padding: 24px 32px 30px; margin: 0 6px; font-size: 15px; line-height: 1.75; color: #333; word-wrap: break-word; overflow-wrap: break-word; position: relative; z-index: 1; }' +
-            '.pdf-body * { max-width: 100% !important; box-sizing: border-box !important; }' +
-            // Images
-            '.pdf-body img { max-width: 100% !important; height: auto !important; display: block; }' +
-            // Tables — exact editor style
-            '.pdf-body table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; font-size: 13px !important; margin: 12px 0; }' +
-            '.pdf-body td, .pdf-body th { word-break: break-word !important; overflow-wrap: break-word !important; padding: 8px 12px !important; border: 2px solid #232f3e !important; text-align: left !important; vertical-align: top !important; }' +
-            '.pdf-body th { background: #232f3e !important; color: #fff !important; font-weight: 600 !important; text-transform: uppercase !important; font-size: 11px !important; letter-spacing: 1px !important; }' +
-            '.pdf-body td { background: #fff !important; }' +
-            '.pdf-body tr:nth-child(even) td { background: #f8f9fa !important; }' +
-            // Headings
-            '.pdf-body h1, .pdf-body h2, .pdf-body h3, .pdf-body h4, .pdf-body h5, .pdf-body h6 { color: #232f3e; }' +
-            '.pdf-body h2 { margin: 14px 0 8px; font-size: 20px; border-bottom: 2px solid #ff9900; padding-bottom: 4px; }' +
-            // Code blocks — exact editor style
-            '.pdf-body pre.code-block, .pdf-body pre { background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 8px; padding: 14px 18px; font-family: "Cascadia Code", "Fira Code", Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin: 12px 0; overflow: hidden; max-width: 100% !important; }' +
-            '.pdf-body code { font-family: "Cascadia Code", "Fira Code", Consolas, monospace; font-size: 13px; }' +
-            // Blockquote
-            '.pdf-body blockquote { border-left: 4px solid #ff9900; padding-left: 16px; color: #666; margin: 12px 0; font-style: italic; overflow-wrap: break-word; word-break: break-word; }' +
-            // Lists — exact editor style with orange bullets
-            '.pdf-body ul { list-style: none; padding-left: 0 !important; margin: 10px 0; }' +
-            '.pdf-body ul li { padding-left: 24px; position: relative; margin-bottom: 8px; }' +
-            '.pdf-body ul li::before { content: "\\2726"; position: absolute; left: 0; color: #ff9900; font-weight: bold; }' +
-            '.pdf-body ol { padding-left: 24px !important; margin: 10px 0; }' +
-            // Links
-            '.pdf-body a { color: #ec7211; }' +
-            // Highlight
-            '.pdf-body mark { background: #ffe066; color: inherit; padding: 1px 2px; border-radius: 2px; }' +
-            // Dividers
-            '.pdf-body hr { border: none; border-top: 2px solid #ff9900; margin: 16px 0; }' +
-            // Generic overflow protection
-            '.pdf-body div, .pdf-body p, .pdf-body span { overflow-wrap: break-word !important; word-break: break-word !important; }';
+        // --- Force all text/backgrounds to be visible ---
+        bodyClone.querySelectorAll('div, p, span, li, strong, em, b, i, u, s').forEach(function(n) {
+            if (!n.closest('pre') && !n.closest('table')) {
+                var bg = n.style.backgroundColor || '';
+                // Reset dark backgrounds to white (keep intentional light colors)
+                if (bg && bg !== 'transparent' && bg !== '#ffe066' && bg !== '#fff3e0') {
+                    var tmp = document.createElement('div');
+                    tmp.style.backgroundColor = bg;
+                    document.body.appendChild(tmp);
+                    var computed = getComputedStyle(tmp).backgroundColor;
+                    document.body.removeChild(tmp);
+                    var match = computed.match(/\d+/g);
+                    if (match) {
+                        var r = parseInt(match[0]), g = parseInt(match[1]), b = parseInt(match[2]);
+                        var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                        if (brightness < 50) n.style.backgroundColor = 'transparent';
+                    }
+                }
+                if (!n.style.color || n.style.color === 'rgb(232, 232, 232)' || n.style.color === '#e8e8e8') {
+                    n.style.color = '#333';
+                }
+            }
+        });
 
-        var htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + pdfCSS + '</style></head><body>' +
-            '<div class="pdf-page">' +
-            '<div class="pdf-header"><div class="pdf-title">' + escapeHtml(noteTitle) + '</div></div>' +
-            '<div class="pdf-body">' + bodyClone.innerHTML + '</div>' +
-            '</div></body></html>';
+        // --- Build wrapper (direct in DOM, white background, on top of everything) ---
+        var wrapper = document.createElement('div');
+        wrapper.id = 'pdf-export-wrapper';
+        wrapper.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:999999;background:#ffffff;overflow:auto;display:flex;justify-content:center;padding:0;margin:0;';
 
-        // Create hidden iframe — fully isolated from dark page
-        var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:710px;border:none;visibility:hidden;';
-        document.body.appendChild(iframe);
+        var page = document.createElement('div');
+        page.style.cssText = 'width:700px;max-width:700px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,Arial,sans-serif;box-sizing:border-box;';
 
-        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(htmlContent);
-        iframeDoc.close();
+        // Page inner frame
+        var frame = document.createElement('div');
+        frame.style.cssText = 'border:8px solid #232f3e;background:#ffffff;position:relative;';
 
-        // Wait for render + images
-        setTimeout(function() {
-            var iframeBody = iframeDoc.body;
-            var imgs = Array.from(iframeBody.querySelectorAll('img'));
-            var imgPromises = imgs.map(function(img) {
-                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-                return new Promise(function(resolve) {
-                    img.onload = resolve;
-                    img.onerror = resolve;
-                    setTimeout(resolve, 3000);
+        // Orange accent border (using a real div, not ::before which html2canvas skips)
+        var accent = document.createElement('div');
+        accent.style.cssText = 'position:absolute;top:2px;left:2px;right:2px;bottom:2px;border:2px solid #ff9900;pointer-events:none;z-index:0;';
+        frame.appendChild(accent);
+
+        // Title
+        var titleBar = document.createElement('div');
+        titleBar.style.cssText = 'padding:18px 32px 12px;border-bottom:4px solid #232f3e;margin:6px 6px 0;position:relative;z-index:1;background:#ffffff;';
+        var titleDiv = document.createElement('div');
+        titleDiv.textContent = noteTitle;
+        titleDiv.style.cssText = 'font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;word-wrap:break-word;';
+        titleBar.appendChild(titleDiv);
+        frame.appendChild(titleBar);
+
+        // Body
+        var bodyDiv = document.createElement('div');
+        bodyDiv.style.cssText = 'padding:24px 32px 30px;margin:0 6px;font-size:15px;line-height:1.75;color:#333;word-wrap:break-word;overflow-wrap:break-word;position:relative;z-index:1;background:#ffffff;';
+        bodyDiv.appendChild(bodyClone);
+        frame.appendChild(bodyDiv);
+
+        page.appendChild(frame);
+        wrapper.appendChild(page);
+        document.body.appendChild(wrapper);
+        wrapper.scrollTop = 0;
+
+        // Wait for images to load
+        var imgs = Array.from(wrapper.querySelectorAll('img'));
+        var imgPromises = imgs.map(function(img) {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            return new Promise(function(resolve) {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 3000);
+            });
+        });
+
+        Promise.all(imgPromises).then(function() {
+            setTimeout(function() {
+                html2pdf().set({
+                    margin: [8, 8, 8, 8],
+                    filename: safeName,
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th', 'img'] }
+                }).from(page).save().then(function() {
+                    wrapper.remove();
+                    window.scrollTo(0, savedScroll);
+                    showToast('PDF exported!');
+                }).catch(function(err) {
+                    console.error('PDF export error:', err);
+                    wrapper.remove();
+                    window.scrollTo(0, savedScroll);
+                    showToast('PDF export failed');
                 });
-            });
-
-            Promise.all(imgPromises).then(function() {
-                setTimeout(function() {
-                    html2pdf().set({
-                        margin: [8, 8, 8, 8],
-                        filename: safeName,
-                        image: { type: 'jpeg', quality: 0.95 },
-                        html2canvas: {
-                            scale: 2,
-                            useCORS: true,
-                            allowTaint: true,
-                            logging: false,
-                            backgroundColor: '#ffffff',
-                            scrollX: 0,
-                            scrollY: 0
-                        },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th'] }
-                    }).from(iframeBody).save().then(function() {
-                        iframe.remove();
-                        showToast('PDF exported!');
-                    }).catch(function(err) {
-                        console.error('PDF export error:', err);
-                        iframe.remove();
-                        showToast('PDF export failed');
-                    });
-                }, 300);
-            });
-        }, 500);
+            }, 600);
+        });
     }
 
     // ===== Helpers =====

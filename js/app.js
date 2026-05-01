@@ -1332,7 +1332,7 @@
             '.resize-handle,.element-delete,.drag-grip{display:none!important;}',
         ].join('');
 
-        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + escapeHtml(noteTitle) + '</title>'
+        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Document By Mahendar</title>'
             + '<style>' + css + '</style></head><body>'
             + '<div class="note-title">' + escapeHtml(noteTitle) + '</div>'
             + '<div class="note-accent"></div>'

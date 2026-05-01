@@ -348,6 +348,15 @@
         updateTopicSelect();
     }
 
+    function pinTopic(topicId) {
+        const topic = topics.find((t) => t.id === topicId);
+        if (!topic) return;
+        topic.pinned = !topic.pinned;
+        saveTopics();
+        renderTopics();
+        showToast(topic.pinned ? 'Topic pinned' : 'Topic unpinned');
+    }
+
     function renderTopics() {
         // Keep the two fixed items (All, Uncategorized), remove custom ones
         el.topicList.querySelectorAll('.topic-item-custom').forEach((e) => e.remove());
@@ -365,17 +374,23 @@
             item.classList.toggle('active', item.dataset.topic === activeTopic);
         });
 
-        // Render custom topics
-        topics.forEach((topic) => {
+        // Render custom topics — pinned first
+        const sortedTopics = [...topics].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+        sortedTopics.forEach((topic) => {
             const count = notes.filter((n) => n.topic === topic.id).length;
             const item = document.createElement('div');
-            item.className = 'topic-item topic-item-custom' + (activeTopic === topic.id ? ' active' : '');
+            item.className = 'topic-item topic-item-custom' + (activeTopic === topic.id ? ' active' : '') + (topic.pinned ? ' topic-pinned' : '');
             item.dataset.topic = topic.id;
             item.innerHTML = `
                 <i class="fas fa-folder"></i>
                 <span class="topic-name">${escapeHtml(topic.name)}</span>
                 <span class="topic-count">${count}</span>
+                <button class="topic-pin-btn" title="${topic.pinned ? 'Unpin topic' : 'Pin topic'}" data-id="${topic.id}"><i class="fas fa-thumbtack"></i></button>
             `;
+            item.querySelector('.topic-pin-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                pinTopic(topic.id);
+            });
             // Click to filter
             item.addEventListener('click', () => {
                 activeTopic = topic.id;

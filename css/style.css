@@ -1088,6 +1088,39 @@ body {
 }
 .topic-item.active .topic-count { background: var(--orange); color: #000; }
 
+/* Pin button on topic items */
+.topic-pin-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    opacity: 0;
+    padding: 2px 4px;
+    font-size: 11px;
+    transition: opacity 0.2s, color 0.2s, transform 0.2s;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.topic-item:hover .topic-pin-btn { opacity: 1; }
+.topic-item.topic-pinned .topic-pin-btn {
+    opacity: 1;
+    color: var(--orange);
+    transform: rotate(-45deg);
+}
+.topic-item.topic-pinned {
+    border-left-color: rgba(255,153,0,0.5);
+}
+.topic-item.topic-pinned .topic-name::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
 /* Edit input for renaming topics */
 .topic-edit-input {
     background: var(--bg-surface);

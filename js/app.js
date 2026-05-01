@@ -1311,16 +1311,16 @@
         // --- Fix tables: strip hardcoded widths, apply inline styles ---
         bodyClone.querySelectorAll('table').forEach(function(t) {
             t.removeAttribute('width');
-            t.style.cssText = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;margin:14px 0;background:#fff;page-break-inside:auto;';
+            t.style.cssText = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;margin:14px 0;background:#fff;page-break-inside:auto;';
             t.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
         });
         bodyClone.querySelectorAll('th').forEach(function(th) {
             th.removeAttribute('width');
-            th.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:10px 14px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#232f3e;color:#fff;font-weight:600;text-transform:uppercase;font-size:12px;letter-spacing:1px;';
+            th.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:6px 8px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#232f3e;color:#fff;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;';
         });
         bodyClone.querySelectorAll('td').forEach(function(td) {
             td.removeAttribute('width');
-            td.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:10px 14px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#fff;color:#333;min-width:80px;';
+            td.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:6px 8px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#fff;color:#333;';
         });
         // Alternating row color
         bodyClone.querySelectorAll('table').forEach(function(table) {
@@ -1427,36 +1427,34 @@
             }
         });
 
-        // --- Build wrapper (white overlay, NO outer frame border — allows page breaks) ---
+        // --- Build wrapper (hidden off-screen, not fixed overlay) ---
         var wrapper = document.createElement('div');
         wrapper.id = 'pdf-export-wrapper';
-        wrapper.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:999999;background:#ffffff;overflow:auto;display:flex;justify-content:center;padding:0;margin:0;';
-
-        var page = document.createElement('div');
-        page.style.cssText = 'width:700px;max-width:700px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif;box-sizing:border-box;';
+        // A4 at 96dpi = 794px wide. Margins 15mm each side = ~113px. Content width = ~681px.
+        // We use 680px content width to match A4 with 15mm margins.
+        var contentWidth = 680;
+        wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + contentWidth + 'px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif;box-sizing:border-box;z-index:-1;';
 
         // Title bar (matches editor: dark border bottom, uppercase, bold)
         var titleBar = document.createElement('div');
-        titleBar.style.cssText = 'padding:24px 40px 14px;border-bottom:4px solid #232f3e;background:#ffffff;page-break-inside:avoid;';
+        titleBar.style.cssText = 'padding:20px 30px 12px;border-bottom:4px solid #232f3e;background:#ffffff;';
         var titleDiv = document.createElement('div');
         titleDiv.textContent = noteTitle;
-        titleDiv.style.cssText = 'font-size:24px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;word-wrap:break-word;';
+        titleDiv.style.cssText = 'font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;word-wrap:break-word;';
         titleBar.appendChild(titleDiv);
         // Orange accent line under title
         var accentLine = document.createElement('div');
-        accentLine.style.cssText = 'height:3px;background:#ff9900;margin-top:10px;border-radius:2px;';
+        accentLine.style.cssText = 'height:3px;background:#ff9900;margin-top:8px;border-radius:2px;';
         titleBar.appendChild(accentLine);
-        page.appendChild(titleBar);
+        wrapper.appendChild(titleBar);
 
         // Body content (matches editor: padding, font-size, line-height)
         var bodyDiv = document.createElement('div');
-        bodyDiv.style.cssText = 'padding:24px 40px 40px;font-size:16px;line-height:1.8;color:#333;word-wrap:break-word;overflow-wrap:break-word;background:#ffffff;';
+        bodyDiv.style.cssText = 'padding:20px 30px 30px;font-size:15px;line-height:1.7;color:#333;word-wrap:break-word;overflow-wrap:break-word;background:#ffffff;';
         bodyDiv.appendChild(bodyClone);
-        page.appendChild(bodyDiv);
+        wrapper.appendChild(bodyDiv);
 
-        wrapper.appendChild(page);
         document.body.appendChild(wrapper);
-        wrapper.scrollTop = 0;
 
         // Wait for images to load
         var imgs = Array.from(wrapper.querySelectorAll('img'));
@@ -1472,7 +1470,7 @@
         Promise.all(imgPromises).then(function() {
             setTimeout(function() {
                 html2pdf().set({
-                    margin: [10, 10, 10, 10],
+                    margin: [15, 15, 15, 15],
                     filename: safeName,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: {
@@ -1480,16 +1478,16 @@
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
-                        backgroundColor: '#ffffff'
+                        backgroundColor: '#ffffff',
+                        width: contentWidth,
+                        windowWidth: contentWidth
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: {
                         mode: ['avoid-all', 'css', 'legacy'],
-                        before: [],
-                        after: [],
-                        avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure']
+                        avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure', '.pdf-avoid-break']
                     }
-                }).from(page).save().then(function() {
+                }).from(wrapper).save().then(function() {
                     wrapper.remove();
                     window.scrollTo(0, savedScroll);
                     showToast('PDF exported!');

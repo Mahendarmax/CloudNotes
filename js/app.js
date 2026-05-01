@@ -1280,7 +1280,7 @@
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
             var ph = document.createElement('div');
             ph.innerHTML = '<span style="font-size:16px;">&#127916;</span> <strong>Video:</strong> ' + escapeHtml(name);
-            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;';
+            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;page-break-inside:avoid;';
             v.replaceWith(ph);
         });
         bodyClone.querySelectorAll('audio').forEach(function(a) {
@@ -1288,14 +1288,14 @@
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
             var ph = document.createElement('div');
             ph.innerHTML = '<span style="font-size:16px;">&#128266;</span> <strong>Audio:</strong> ' + escapeHtml(name);
-            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;';
+            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;page-break-inside:avoid;';
             a.replaceWith(ph);
         });
         bodyClone.querySelectorAll('iframe').forEach(function(f) {
             var src = f.getAttribute('src') || '';
             var ph = document.createElement('div');
             ph.innerHTML = '<span style="font-size:16px;">&#127760;</span> <strong>Embedded:</strong> ' + escapeHtml(src);
-            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;word-break:break-all;';
+            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;word-break:break-all;page-break-inside:avoid;';
             f.replaceWith(ph);
         });
 
@@ -1305,48 +1305,56 @@
             img.style.height = 'auto';
             img.style.display = 'block';
             img.style.margin = '8px 0';
+            img.style.pageBreakInside = 'avoid';
         });
 
         // --- Fix tables: strip hardcoded widths, apply inline styles ---
         bodyClone.querySelectorAll('table').forEach(function(t) {
             t.removeAttribute('width');
-            t.style.cssText = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin:12px 0;background:#fff;';
+            t.style.cssText = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;margin:14px 0;background:#fff;page-break-inside:auto;';
             t.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
         });
         bodyClone.querySelectorAll('th').forEach(function(th) {
             th.removeAttribute('width');
-            th.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:8px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#232f3e;color:#fff;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:1px;';
+            th.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:10px 14px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#232f3e;color:#fff;font-weight:600;text-transform:uppercase;font-size:12px;letter-spacing:1px;';
         });
         bodyClone.querySelectorAll('td').forEach(function(td) {
             td.removeAttribute('width');
-            td.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:8px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#fff;color:#333;';
+            td.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:10px 14px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#fff;color:#333;min-width:80px;';
         });
         // Alternating row color
-        bodyClone.querySelectorAll('tr').forEach(function(tr, i) {
-            if (i % 2 === 0) {
-                tr.querySelectorAll('td').forEach(function(td) { td.style.background = '#f8f9fa'; });
-            }
+        bodyClone.querySelectorAll('table').forEach(function(table) {
+            var rows = table.querySelectorAll('tbody tr');
+            rows.forEach(function(tr, i) {
+                if (i % 2 === 1) {
+                    tr.querySelectorAll('td').forEach(function(td) { td.style.background = '#f8f9fa'; });
+                }
+                tr.style.pageBreakInside = 'avoid';
+            });
         });
 
-        // --- Fix headings ---
-        bodyClone.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(function(h) {
+        // --- Fix headings (match editor exactly) ---
+        bodyClone.querySelectorAll('h2').forEach(function(h2) {
+            h2.style.cssText = 'color:#232f3e;background:transparent;font-size:22px;font-weight:700;margin:20px 0 10px 0;border-bottom:2px solid #ff9900;padding-bottom:6px;page-break-after:avoid;page-break-inside:avoid;overflow-wrap:anywhere;';
+        });
+        bodyClone.querySelectorAll('h3').forEach(function(h3) {
+            h3.style.cssText = 'color:#232f3e;background:transparent;font-size:18px;font-weight:700;margin:16px 0 8px 0;page-break-after:avoid;page-break-inside:avoid;overflow-wrap:anywhere;';
+        });
+        bodyClone.querySelectorAll('h1,h4,h5,h6').forEach(function(h) {
             h.style.color = '#232f3e';
             h.style.background = 'transparent';
-        });
-        bodyClone.querySelectorAll('h2').forEach(function(h2) {
-            h2.style.borderBottom = '2px solid #ff9900';
-            h2.style.paddingBottom = '4px';
-            h2.style.marginTop = '14px';
+            h.style.pageBreakAfter = 'avoid';
+            h.style.pageBreakInside = 'avoid';
         });
 
         // --- Fix code blocks ---
         bodyClone.querySelectorAll('pre').forEach(function(pre) {
-            pre.style.cssText = 'background:#1e1e2e;color:#cdd6f4;border:1px solid #45475a;border-radius:8px;padding:14px 18px;font-family:Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:12px 0;overflow:hidden;max-width:100%;';
+            pre.style.cssText = 'background:#1e1e2e;color:#cdd6f4;border:1px solid #45475a;border-radius:8px;padding:14px 18px;font-family:Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:12px 0;overflow:hidden;max-width:100%;page-break-inside:avoid;';
         });
 
         // --- Fix blockquotes ---
         bodyClone.querySelectorAll('blockquote').forEach(function(bq) {
-            bq.style.cssText = 'border-left:4px solid #ff9900;padding-left:16px;color:#555;margin:12px 0;font-style:italic;background:transparent;';
+            bq.style.cssText = 'border-left:4px solid #ff9900;padding-left:16px;color:#555;margin:12px 0;font-style:italic;background:transparent;page-break-inside:avoid;';
         });
 
         // --- Fix links ---
@@ -1362,9 +1370,29 @@
         });
 
         // --- Fix lists ---
+        bodyClone.querySelectorAll('ul, ol').forEach(function(list) {
+            list.style.pageBreakInside = 'auto';
+            list.style.background = 'transparent';
+        });
         bodyClone.querySelectorAll('li').forEach(function(li) {
             li.style.color = '#333';
             li.style.background = 'transparent';
+            li.style.pageBreakInside = 'avoid';
+            li.style.marginBottom = '6px';
+        });
+
+        // --- Fix paragraphs ---
+        bodyClone.querySelectorAll('p').forEach(function(p) {
+            p.style.pageBreakInside = 'avoid';
+            p.style.background = 'transparent';
+            if (!p.style.color || p.style.color === 'rgb(232, 232, 232)' || p.style.color === '#e8e8e8') {
+                p.style.color = '#333';
+            }
+        });
+
+        // --- Fix hr dividers ---
+        bodyClone.querySelectorAll('hr').forEach(function(hr) {
+            hr.style.cssText = 'border:none;border-top:3px solid #ff9900;margin:20px 0;page-break-after:avoid;';
         });
 
         // --- Strip oversized inline widths ---
@@ -1373,14 +1401,13 @@
                 var w = parseInt(node.style.width, 10);
                 if (w > 600) node.style.width = '100%';
             }
-            if (node.style.minWidth) node.style.minWidth = '0';
+            if (node.style.minWidth && node.tagName !== 'TD') node.style.minWidth = '0';
         });
 
-        // --- Force all text/backgrounds to be visible ---
-        bodyClone.querySelectorAll('div, p, span, li, strong, em, b, i, u, s').forEach(function(n) {
-            if (!n.closest('pre') && !n.closest('table')) {
+        // --- Force visible text on dark bg elements (outside pre/table) ---
+        bodyClone.querySelectorAll('div, span, strong, em, b, i, u, s').forEach(function(n) {
+            if (!n.closest('pre') && !n.closest('table') && !n.closest('[style*="border-left"]')) {
                 var bg = n.style.backgroundColor || '';
-                // Reset dark backgrounds to white (keep intentional light colors)
                 if (bg && bg !== 'transparent' && bg !== '#ffe066' && bg !== '#fff3e0') {
                     var tmp = document.createElement('div');
                     tmp.style.backgroundColor = bg;
@@ -1389,8 +1416,8 @@
                     document.body.removeChild(tmp);
                     var match = computed.match(/\d+/g);
                     if (match) {
-                        var r = parseInt(match[0]), g = parseInt(match[1]), b = parseInt(match[2]);
-                        var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                        var r = parseInt(match[0]), g = parseInt(match[1]), bv = parseInt(match[2]);
+                        var brightness = (r * 299 + g * 587 + bv * 114) / 1000;
                         if (brightness < 50) n.style.backgroundColor = 'transparent';
                     }
                 }
@@ -1400,39 +1427,33 @@
             }
         });
 
-        // --- Build wrapper (direct in DOM, white background, on top of everything) ---
+        // --- Build wrapper (white overlay, NO outer frame border — allows page breaks) ---
         var wrapper = document.createElement('div');
         wrapper.id = 'pdf-export-wrapper';
         wrapper.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:999999;background:#ffffff;overflow:auto;display:flex;justify-content:center;padding:0;margin:0;';
 
         var page = document.createElement('div');
-        page.style.cssText = 'width:700px;max-width:700px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,Arial,sans-serif;box-sizing:border-box;';
+        page.style.cssText = 'width:700px;max-width:700px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif;box-sizing:border-box;';
 
-        // Page inner frame
-        var frame = document.createElement('div');
-        frame.style.cssText = 'border:8px solid #232f3e;background:#ffffff;position:relative;';
-
-        // Orange accent border (using a real div, not ::before which html2canvas skips)
-        var accent = document.createElement('div');
-        accent.style.cssText = 'position:absolute;top:2px;left:2px;right:2px;bottom:2px;border:2px solid #ff9900;pointer-events:none;z-index:0;';
-        frame.appendChild(accent);
-
-        // Title
+        // Title bar (matches editor: dark border bottom, uppercase, bold)
         var titleBar = document.createElement('div');
-        titleBar.style.cssText = 'padding:18px 32px 12px;border-bottom:4px solid #232f3e;margin:6px 6px 0;position:relative;z-index:1;background:#ffffff;';
+        titleBar.style.cssText = 'padding:24px 40px 14px;border-bottom:4px solid #232f3e;background:#ffffff;page-break-inside:avoid;';
         var titleDiv = document.createElement('div');
         titleDiv.textContent = noteTitle;
-        titleDiv.style.cssText = 'font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;word-wrap:break-word;';
+        titleDiv.style.cssText = 'font-size:24px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;word-wrap:break-word;';
         titleBar.appendChild(titleDiv);
-        frame.appendChild(titleBar);
+        // Orange accent line under title
+        var accentLine = document.createElement('div');
+        accentLine.style.cssText = 'height:3px;background:#ff9900;margin-top:10px;border-radius:2px;';
+        titleBar.appendChild(accentLine);
+        page.appendChild(titleBar);
 
-        // Body
+        // Body content (matches editor: padding, font-size, line-height)
         var bodyDiv = document.createElement('div');
-        bodyDiv.style.cssText = 'padding:24px 32px 30px;margin:0 6px;font-size:15px;line-height:1.75;color:#333;word-wrap:break-word;overflow-wrap:break-word;position:relative;z-index:1;background:#ffffff;';
+        bodyDiv.style.cssText = 'padding:24px 40px 40px;font-size:16px;line-height:1.8;color:#333;word-wrap:break-word;overflow-wrap:break-word;background:#ffffff;';
         bodyDiv.appendChild(bodyClone);
-        frame.appendChild(bodyDiv);
+        page.appendChild(bodyDiv);
 
-        page.appendChild(frame);
         wrapper.appendChild(page);
         document.body.appendChild(wrapper);
         wrapper.scrollTop = 0;
@@ -1451,9 +1472,9 @@
         Promise.all(imgPromises).then(function() {
             setTimeout(function() {
                 html2pdf().set({
-                    margin: [8, 8, 8, 8],
+                    margin: [10, 10, 10, 10],
                     filename: safeName,
-                    image: { type: 'jpeg', quality: 0.95 },
+                    image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: {
                         scale: 2,
                         useCORS: true,
@@ -1462,7 +1483,38 @@
                         backgroundColor: '#ffffff'
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th', 'img'] }
+                    pagebreak: {
+                        mode: ['avoid-all', 'css', 'legacy'],
+                        before: [],
+                        after: [],
+                        avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure']
+                   
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 3000);
+            });
+        });
+
+        Promise.all(imgPromises).then(function() {
+            setTimeout(function() {
+                html2pdf().set({
+                    margin: [10, 10, 10, 10],
+                    filename: safeName,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: {
+                        mode: ['avoid-all', 'css', 'legacy'],
+                        before: [],
+                        after: [],
+                        avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure']
+                    }
                 }).from(page).save().then(function() {
                     wrapper.remove();
                     window.scrollTo(0, savedScroll);

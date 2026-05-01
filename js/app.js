@@ -1488,32 +1488,6 @@
                         before: [],
                         after: [],
                         avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure']
-                   
-                img.onload = resolve;
-                img.onerror = resolve;
-                setTimeout(resolve, 3000);
-            });
-        });
-
-        Promise.all(imgPromises).then(function() {
-            setTimeout(function() {
-                html2pdf().set({
-                    margin: [10, 10, 10, 10],
-                    filename: safeName,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        allowTaint: true,
-                        logging: false,
-                        backgroundColor: '#ffffff'
-                    },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: {
-                        mode: ['avoid-all', 'css', 'legacy'],
-                        before: [],
-                        after: [],
-                        avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure']
                     }
                 }).from(page).save().then(function() {
                     wrapper.remove();

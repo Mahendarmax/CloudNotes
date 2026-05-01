@@ -1267,140 +1267,111 @@
         updateStats();
     }
 
-    // ===== Export Note as PDF (direct download via html2pdf.js) =====
+    // ===== Export Note as PDF (direct download, isolated iframe render) =====
     function exportNotePdf() {
         var note = notes.find(function(n) { return n.id === editingId; });
         var noteTitle = (note && note.title) ? note.title : (el.title.value || 'Untitled');
         var noteBody  = (note && note.body)  ? note.body  : el.body.innerHTML;
 
-        if (!noteTitle.trim() && !noteBody.trim()) {
-            showToast('Nothing to export');
-            return;
-        }
+        if (!noteTitle.trim() && !noteBody.trim()) { showToast('Nothing to export'); return; }
 
         showToast('Generating PDF...');
 
-        // Parse and clean body HTML
+        // ---- Clean the note body HTML ----
         var parser = new DOMParser();
-        var doc = parser.parseFromString('<div id="root">' + noteBody + '</div>', 'text/html');
-        var root = doc.getElementById('root');
+        var doc = parser.parseFromString('<div id="r">' + noteBody + '</div>', 'text/html');
+        var root = doc.getElementById('r');
 
-        // Remove editor-only chrome
-        root.querySelectorAll('.resize-handle, .element-delete, .drag-grip, .drag-placeholder').forEach(function(e) { e.remove(); });
+        root.querySelectorAll('.resize-handle,.element-delete,.drag-grip,.drag-placeholder').forEach(function(e){ e.remove(); });
 
-        // Replace media with readable placeholders
-        root.querySelectorAll('video').forEach(function(v) {
-            var src = (v.querySelector('source') || v).getAttribute('src') || '';
+        root.querySelectorAll('video').forEach(function(v){
+            var src = (v.querySelector('source')||v).getAttribute('src')||'';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
-            var ph = doc.createElement('div'); ph.className = 'media-ph'; ph.textContent = '🎬 Video: ' + name; v.replaceWith(ph);
+            var ph = doc.createElement('div'); ph.className='media-ph'; ph.textContent='🎬 Video: '+name; v.replaceWith(ph);
         });
-        root.querySelectorAll('audio').forEach(function(a) {
-            var src = (a.querySelector('source') || a).getAttribute('src') || '';
+        root.querySelectorAll('audio').forEach(function(a){
+            var src = (a.querySelector('source')||a).getAttribute('src')||'';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
-            var ph = doc.createElement('div'); ph.className = 'media-ph'; ph.textContent = '🔊 Audio: ' + name; a.replaceWith(ph);
+            var ph = doc.createElement('div'); ph.className='media-ph'; ph.textContent='🔊 Audio: '+name; a.replaceWith(ph);
         });
-        root.querySelectorAll('iframe').forEach(function(f) {
-            var ph = doc.createElement('div'); ph.className = 'media-ph'; ph.textContent = '🌐 Embedded: ' + (f.getAttribute('src') || ''); f.replaceWith(ph);
-        });
-
-        // Strip dark inline backgrounds & near-white inline text colors
-        root.querySelectorAll('[style]').forEach(function(n) {
-            var brightness = function(css) {
-                var m = (css || '').match(/\d+/g);
-                return m ? (parseInt(m[0])*299 + parseInt(m[1])*587 + parseInt(m[2])*114) / 1000 : 128;
-            };
-            if (n.style.backgroundColor && brightness(n.style.backgroundColor) < 60)  n.style.backgroundColor = '';
-            if (n.style.color && brightness(n.style.color) > 200 && !n.closest('pre') && !n.closest('th')) n.style.color = '';
-            if (n.style.width && parseInt(n.style.width) > 700 && n.tagName !== 'IMG') n.style.width = '100%';
+        root.querySelectorAll('iframe').forEach(function(f){
+            var ph = doc.createElement('div'); ph.className='media-ph'; ph.textContent='🌐 Embedded: '+(f.getAttribute('src')||''); f.replaceWith(ph);
         });
 
-        // Build off-screen print container (must be in DOM for html2canvas)
-        var container = document.createElement('div');
-        container.id = 'pdf-render-container';
-        container.style.cssText = [
-            'position:fixed', 'left:-9999px', 'top:0',
-            'width:794px',          // A4 at 96 dpi
-            'background:#ffffff',
-            'color:#222',
-            'font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif',
-            'font-size:14px', 'line-height:1.7',
-            'padding:40px 50px 50px',
-            'box-sizing:border-box',
-            'z-index:-1'
-        ].join(';');
+        // Strip dark bg / near-white text (editor dark-theme artifacts)
+        root.querySelectorAll('[style]').forEach(function(n){
+            var lum = function(css){ var m=(css||'').match(/\d+/g); return m?(+m[0]*299+ +m[1]*587+ +m[2]*114)/1000:128; };
+            if(n.style.backgroundColor && lum(n.style.backgroundColor)<60)  n.style.backgroundColor='';
+            if(n.style.color && lum(n.style.color)>200 && !n.closest('pre') && !n.closest('th')) n.style.color='';
+            if(n.style.width && parseInt(n.style.width)>700 && n.tagName!=='IMG') n.style.width='100%';
+        });
 
-        // Title block
-        var titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:4px solid #232f3e;padding-bottom:8px;margin:0 0 4px;word-break:break-word;';
-        titleEl.textContent = noteTitle;
-        container.appendChild(titleEl);
+        var cleanBody = root.innerHTML;
 
-        var accent = document.createElement('div');
-        accent.style.cssText = 'height:3px;background:#ff9900;border-radius:2px;margin-bottom:28px;';
-        container.appendChild(accent);
-
-        // Body content wrapper with scoped styles via a <style> tag
-        var styleEl = document.createElement('style');
-        styleEl.textContent = [
-            '#pdf-render-container h1,#pdf-render-container h2,#pdf-render-container h3,#pdf-render-container h4,#pdf-render-container h5,#pdf-render-container h6{color:#232f3e;page-break-after:avoid;}',
-            '#pdf-render-container h2{font-size:18px;border-bottom:2px solid #ff9900;padding-bottom:4px;margin:20px 0 10px;}',
-            '#pdf-render-container h3{font-size:15px;margin:16px 0 8px;}',
-            '#pdf-render-container p{margin:6px 0;page-break-inside:avoid;}',
-            '#pdf-render-container ul,#pdf-render-container ol{margin:8px 0 8px 20px;}',
-            '#pdf-render-container li{margin-bottom:4px;page-break-inside:avoid;}',
-            '#pdf-render-container table{width:100%;border-collapse:collapse;font-size:12px;margin:14px 0;table-layout:fixed;page-break-inside:auto;}',
-            '#pdf-render-container thead{display:table-header-group;}',
-            '#pdf-render-container tr{page-break-inside:avoid;}',
-            '#pdf-render-container th{background:#232f3e!important;color:#fff!important;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px;padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;}',
-            '#pdf-render-container td{padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;color:#222;word-break:break-word;overflow-wrap:break-word;}',
-            '#pdf-render-container tbody tr:nth-child(even) td{background:#f8f9fa;}',
-            '#pdf-render-container pre{background:#1e1e2e!important;color:#cdd6f4!important;border:1px solid #45475a;border-radius:6px;padding:12px 16px;font-family:Consolas,"Courier New",monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:10px 0;page-break-inside:avoid;}',
-            '#pdf-render-container code{font-family:Consolas,"Courier New",monospace;font-size:12px;}',
-            '#pdf-render-container blockquote{border-left:4px solid #ff9900;padding-left:14px;color:#555;margin:10px 0;font-style:italic;page-break-inside:avoid;}',
-            '#pdf-render-container mark{background:#ffe066!important;color:#222!important;padding:1px 3px;border-radius:2px;}',
-            '#pdf-render-container a{color:#ec7211;text-decoration:underline;}',
-            '#pdf-render-container hr{border:none;border-top:3px solid #ff9900;margin:18px 0;}',
-            '#pdf-render-container img{max-width:100%;height:auto;display:block;margin:8px 0;page-break-inside:avoid;border-radius:4px;}',
-            '#pdf-render-container .media-ph{padding:8px 12px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 4px 4px 0;color:#555;font-size:12px;margin:8px 0;}',
-            '#pdf-render-container .resizable-wrapper{position:static!important;width:auto!important;display:block;}',
-            '#pdf-render-container .resize-handle,#pdf-render-container .element-delete,#pdf-render-container .drag-grip{display:none!important;}',
+        // ---- Build complete HTML document for the iframe ----
+        var css = [
+            '*{box-sizing:border-box;margin:0;padding:0;}',
+            'body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.7;color:#222;background:#fff;padding:40px 50px 50px;}',
+            '.note-title{font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:4px solid #232f3e;padding-bottom:8px;margin-bottom:4px;word-break:break-word;}',
+            '.note-accent{height:3px;background:#ff9900;border-radius:2px;margin-bottom:28px;}',
+            'h1,h2,h3,h4,h5,h6{color:#232f3e;page-break-after:avoid;}',
+            'h2{font-size:18px;border-bottom:2px solid #ff9900;padding-bottom:4px;margin:20px 0 10px;}',
+            'h3{font-size:15px;margin:16px 0 8px;}',
+            'p{margin:6px 0;page-break-inside:avoid;}',
+            'ul,ol{margin:8px 0 8px 20px;}',
+            'li{margin-bottom:4px;page-break-inside:avoid;}',
+            'table{width:100%;border-collapse:collapse;font-size:12px;margin:14px 0;table-layout:fixed;page-break-inside:auto;}',
+            'thead{display:table-header-group;}',
+            'tr{page-break-inside:avoid;}',
+            'th{background:#232f3e!important;color:#fff!important;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px;padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;}',
+            'td{padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;color:#222;word-break:break-word;overflow-wrap:break-word;}',
+            'tbody tr:nth-child(even) td{background:#f8f9fa;}',
+            'pre{background:#1e1e2e!important;color:#cdd6f4!important;border:1px solid #45475a;border-radius:6px;padding:12px 16px;font-family:Consolas,"Courier New",monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:10px 0;page-break-inside:avoid;}',
+            'code{font-family:Consolas,"Courier New",monospace;font-size:12px;}',
+            'blockquote{border-left:4px solid #ff9900;padding-left:14px;color:#555;margin:10px 0;font-style:italic;page-break-inside:avoid;}',
+            'mark{background:#ffe066!important;color:#222!important;padding:1px 3px;border-radius:2px;}',
+            'a{color:#ec7211;text-decoration:underline;}',
+            'hr{border:none;border-top:3px solid #ff9900;margin:18px 0;}',
+            'img{max-width:100%;height:auto;display:block;margin:8px 0;page-break-inside:avoid;border-radius:4px;}',
+            '.media-ph{padding:8px 12px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 4px 4px 0;color:#555;font-size:12px;margin:8px 0;}',
+            '.resizable-wrapper{position:static!important;width:auto!important;display:block;}',
+            '.resize-handle,.element-delete,.drag-grip{display:none!important;}',
         ].join('');
-        document.head.appendChild(styleEl);
 
-        var bodyWrap = document.createElement('div');
-        bodyWrap.innerHTML = root.innerHTML;
-        container.appendChild(bodyWrap);
-        document.body.appendChild(container);
+        var fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>'
+            + '<div class="note-title">' + escapeHtml(noteTitle) + '</div>'
+            + '<div class="note-accent"></div>'
+            + cleanBody
+            + '</body></html>';
 
-        var safeName = noteTitle.replace(/[^a-zA-Z0-9\-_ ]/g, '_').trim() + '.pdf';
+        // ---- Render in a hidden iframe (isolated from app CSS) ----
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
 
-        html2pdf().set({
-            margin:     [0, 0, 0, 0],
-            filename:   safeName,
-            image:      { type: 'jpeg', quality: 0.97 },
-            html2canvas: {
-                scale:           2,
-                useCORS:         true,
-                allowTaint:      true,
-                backgroundColor: '#ffffff',
-                logging:         false,
-                width:           794
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: {
-                mode:  ['css', 'legacy'],
-                avoid: ['tr', 'thead', 'img', 'pre', 'blockquote', 'h2', 'h3', 'h4', 'li']
-            }
-        }).from(container).save().then(function() {
-            container.remove();
-            styleEl.remove();
-            showToast('PDF downloaded!');
-        }).catch(function(err) {
-            console.error('PDF export error:', err);
-            container.remove();
-            styleEl.remove();
-            showToast('PDF export failed');
-        });
+        var iDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iDoc.open(); iDoc.write(fullHtml); iDoc.close();
+
+        var safeName = noteTitle.replace(/[^a-zA-Z0-9\-_ ]/g,'_').trim() + '.pdf';
+
+        // Give iframe a moment to render, then export
+        setTimeout(function() {
+            html2pdf().set({
+                margin:      [10, 10, 10, 10],
+                filename:    safeName,
+                image:       { type: 'jpeg', quality: 0.97 },
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false },
+                jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:   { mode: ['css','legacy'], avoid: ['tr','thead','img','pre','blockquote','h2','h3','li'] }
+            }).from(iDoc.body).save().then(function(){
+                iframe.remove();
+                showToast('PDF downloaded!');
+            }).catch(function(err){
+                console.error('PDF export error:', err);
+                iframe.remove();
+                showToast('PDF export failed');
+            });
+        }, 300);
     }
 
     // ===== Draw / Sketch (inline overlay on note body) =====

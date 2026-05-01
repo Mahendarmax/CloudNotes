@@ -1271,9 +1271,9 @@
         // At 96dpi: 190mm = ~718px. Use that as wrapper width.
         var pdfContentWidth = 718;
 
-        // Create wrapper in NORMAL document flow
+        // Create wrapper — position absolute to isolate from page flex layout
         var wrapper = document.createElement('div');
-        wrapper.style.cssText = 'width:' + pdfContentWidth + 'px;max-width:' + pdfContentWidth + 'px;background:#fff;padding:30px 36px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;overflow:hidden;';
+        wrapper.style.cssText = 'position:absolute;left:0;top:0;z-index:99999;width:' + pdfContentWidth + 'px;max-width:' + pdfContentWidth + 'px;background:#fff;padding:30px 36px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;overflow:hidden;';
 
         // Inject a style block to force all content to fit
         var styleTag = document.createElement('style');
@@ -1340,6 +1340,18 @@
             }
             if (node.style.minWidth) { node.style.minWidth = '0'; }
         });
+        // Force-remove explicit widths from all table cells so table-layout:fixed works
+        bodyClone.querySelectorAll('table').forEach(function(table) {
+            table.removeAttribute('width');
+            table.style.removeProperty('min-width');
+            // Remove col/colgroup widths
+            table.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
+        });
+        bodyClone.querySelectorAll('td, th').forEach(function(cell) {
+            cell.removeAttribute('width');
+            cell.style.removeProperty('width');
+            cell.style.removeProperty('min-width');
+        });
 
         wrapper.appendChild(bodyClone);
 
@@ -1369,8 +1381,10 @@
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
-                        width: pdfContentWidth,
-                        windowWidth: pdfContentWidth
+                        scrollX: 0,
+                        scrollY: 0,
+                        x: 0,
+                        y: 0
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th', '.avoid-break'] }

@@ -1264,41 +1264,10 @@
         var noteTitle = el.title.value || 'Untitled';
         var safeName = noteTitle.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
 
-        // Save current scroll
-        var savedScroll = window.scrollY;
-
-        // A4 = 210mm x 297mm. With 10mm margins => usable 190mm x 277mm.
-        // At 96dpi: 190mm = ~718px. Use that as wrapper width.
-        var pdfContentWidth = 718;
-
-        // Create wrapper — position absolute to isolate from page flex layout
-        var wrapper = document.createElement('div');
-        wrapper.style.cssText = 'position:absolute;left:0;top:0;z-index:99999;width:' + pdfContentWidth + 'px;max-width:' + pdfContentWidth + 'px;background:#fff;padding:30px 36px;font-family:Segoe UI,Arial,sans-serif;color:#222;box-sizing:border-box;overflow:hidden;';
-
-        // Inject a style block to force all content to fit
-        var styleTag = document.createElement('style');
-        styleTag.textContent = '' +
-            '#pdf-export-wrapper * { max-width: 100% !important; box-sizing: border-box !important; }' +
-            '#pdf-export-wrapper table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; word-break: break-word !important; overflow-wrap: break-word !important; font-size: 11px !important; }' +
-            '#pdf-export-wrapper td, #pdf-export-wrapper th { word-break: break-word !important; overflow-wrap: break-word !important; overflow: hidden !important; padding: 5px 6px !important; border: 1px solid #bbb !important; vertical-align: top !important; }' +
-            '#pdf-export-wrapper img { max-width: 100% !important; height: auto !important; }' +
-            '#pdf-export-wrapper pre { white-space: pre-wrap !important; word-break: break-word !important; overflow: hidden !important; max-width: 100% !important; }' +
-            '#pdf-export-wrapper div, #pdf-export-wrapper p, #pdf-export-wrapper span, #pdf-export-wrapper code, #pdf-export-wrapper blockquote { overflow-wrap: break-word !important; word-break: break-word !important; }' +
-            '#pdf-export-wrapper ul, #pdf-export-wrapper ol { padding-left: 20px !important; }';
-        wrapper.appendChild(styleTag);
-        wrapper.id = 'pdf-export-wrapper';
-
-        // Title
-        var titleEl = document.createElement('div');
-        titleEl.textContent = noteTitle;
-        titleEl.style.cssText = 'font-size:20px;font-weight:bold;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:3px solid #ff9900;padding-bottom:8px;margin-bottom:18px;word-wrap:break-word;';
-        wrapper.appendChild(titleEl);
-
-        // Clone the note body exactly as-is
+        // Clone the note body
         var bodyClone = el.body.cloneNode(true);
         bodyClone.removeAttribute('contenteditable');
         bodyClone.removeAttribute('id');
-        bodyClone.style.cssText = 'font-size:13px;line-height:1.6;color:#222;word-wrap:break-word;overflow-wrap:break-word;overflow:hidden;';
 
         // Remove editor UI elements
         bodyClone.querySelectorAll('.resize-handle, .element-delete, .drag-placeholder, .drag-grip').forEach(function(e) { e.remove(); });
@@ -1309,7 +1278,7 @@
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
             var ph = document.createElement('div');
             ph.textContent = '\uD83C\uDFAC Video: ' + name;
-            ph.style.cssText = 'padding:10px 14px;background:#f0f0f0;border:1px solid #ccc;border-radius:5px;color:#555;font-size:13px;margin:8px 0;';
+            ph.style.cssText = 'padding:8px 12px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;color:#666;font-size:12px;margin:6px 0;';
             v.replaceWith(ph);
         });
 
@@ -1319,7 +1288,7 @@
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
             var ph = document.createElement('div');
             ph.textContent = '\uD83D\uDD0A Audio: ' + name;
-            ph.style.cssText = 'padding:10px 14px;background:#f0f0f0;border:1px solid #ccc;border-radius:5px;color:#555;font-size:13px;margin:8px 0;';
+            ph.style.cssText = 'padding:8px 12px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;color:#666;font-size:12px;margin:6px 0;';
             a.replaceWith(ph);
         });
 
@@ -1328,78 +1297,106 @@
             var src = f.getAttribute('src') || '';
             var ph = document.createElement('div');
             ph.textContent = '\uD83C\uDFAC Embedded: ' + src;
-            ph.style.cssText = 'padding:10px 14px;background:#f0f0f0;border:1px solid #ccc;border-radius:5px;color:#555;font-size:13px;margin:8px 0;word-break:break-all;';
+            ph.style.cssText = 'padding:8px 12px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;color:#666;font-size:12px;margin:6px 0;word-break:break-all;';
             f.replaceWith(ph);
         });
 
-        // Strip any inline width/min-width that exceeds container
+        // Strip explicit widths from tables/cells
+        bodyClone.querySelectorAll('table').forEach(function(t) {
+            t.removeAttribute('width');
+            t.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
+        });
+        bodyClone.querySelectorAll('td, th').forEach(function(c) {
+            c.removeAttribute('width');
+            if (c.style.width) c.style.removeProperty('width');
+            if (c.style.minWidth) c.style.removeProperty('min-width');
+        });
+
+        // Strip oversized inline widths from any element
         bodyClone.querySelectorAll('[style]').forEach(function(node) {
             if (node.style.width) {
                 var w = parseInt(node.style.width, 10);
-                if (w > pdfContentWidth - 72) { node.style.width = '100%'; }
+                if (w > 600) node.style.width = '100%';
             }
-            if (node.style.minWidth) { node.style.minWidth = '0'; }
-        });
-        // Force-remove explicit widths from all table cells so table-layout:fixed works
-        bodyClone.querySelectorAll('table').forEach(function(table) {
-            table.removeAttribute('width');
-            table.style.removeProperty('min-width');
-            // Remove col/colgroup widths
-            table.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
-        });
-        bodyClone.querySelectorAll('td, th').forEach(function(cell) {
-            cell.removeAttribute('width');
-            cell.style.removeProperty('width');
-            cell.style.removeProperty('min-width');
+            if (node.style.minWidth) node.style.minWidth = '0';
         });
 
-        wrapper.appendChild(bodyClone);
+        // Build a full standalone HTML document for a hidden iframe
+        var htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+            '<style>' +
+            '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
+            'body { width: 710px; margin: 0; padding: 32px 40px; font-family: Segoe UI, Arial, sans-serif; background: #fff; color: #222; }' +
+            '.pdf-title { font-size: 20px; font-weight: bold; color: #232f3e; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 3px solid #ff9900; padding-bottom: 8px; margin-bottom: 16px; word-wrap: break-word; }' +
+            '.pdf-body { font-size: 13px; line-height: 1.65; color: #222; word-wrap: break-word; overflow-wrap: break-word; }' +
+            '.pdf-body * { max-width: 100% !important; box-sizing: border-box !important; }' +
+            '.pdf-body img { max-width: 100% !important; height: auto !important; display: block; }' +
+            '.pdf-body table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; font-size: 11px !important; margin: 8px 0; }' +
+            '.pdf-body td, .pdf-body th { word-break: break-word !important; overflow-wrap: break-word !important; padding: 5px 7px !important; border: 1px solid #bbb !important; vertical-align: top !important; }' +
+            '.pdf-body th { background: #f0f4f8 !important; font-weight: 600 !important; color: #232f3e !important; }' +
+            '.pdf-body pre, .pdf-body code { white-space: pre-wrap !important; word-break: break-word !important; overflow: hidden !important; max-width: 100% !important; font-size: 12px; }' +
+            '.pdf-body pre { background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0; }' +
+            '.pdf-body div, .pdf-body p, .pdf-body span, .pdf-body blockquote { overflow-wrap: break-word !important; word-break: break-word !important; }' +
+            '.pdf-body ul, .pdf-body ol { padding-left: 22px !important; }' +
+            '.pdf-body h1, .pdf-body h2, .pdf-body h3, .pdf-body h4, .pdf-body h5, .pdf-body h6 { color: #232f3e; margin: 12px 0 6px 0; }' +
+            '.pdf-body a { color: #0066cc; text-decoration: underline; }' +
+            '</style></head><body>' +
+            '<div class="pdf-title">' + escapeHtml(noteTitle) + '</div>' +
+            '<div class="pdf-body">' + bodyClone.innerHTML + '</div>' +
+            '</body></html>';
 
-        // Insert at the VERY TOP of body so it's in-flow and visible
-        document.body.insertBefore(wrapper, document.body.firstChild);
-        window.scrollTo(0, 0);
+        // Create a hidden iframe — fully isolated white background
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:710px;height:auto;border:none;visibility:hidden;';
+        document.body.appendChild(iframe);
 
-        // Wait for images to load
-        var imgs = Array.from(bodyClone.querySelectorAll('img'));
-        var imgPromises = imgs.map(function(img) {
-            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-            return new Promise(function(resolve) {
-                img.onload = resolve;
-                img.onerror = resolve;
-                setTimeout(resolve, 3000);
-            });
-        });
+        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(htmlContent);
+        iframeDoc.close();
 
-        Promise.all(imgPromises).then(function() {
-            setTimeout(function() {
-                html2pdf().set({
-                    margin: [10, 10, 10, 10],
-                    filename: safeName,
-                    image: { type: 'jpeg', quality: 0.95 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        allowTaint: true,
-                        logging: false,
-                        scrollX: 0,
-                        scrollY: 0,
-                        x: 0,
-                        y: 0
-                    },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th', '.avoid-break'] }
-                }).from(wrapper).save().then(function() {
-                    wrapper.remove();
-                    window.scrollTo(0, savedScroll);
-                    showToast('PDF exported!');
-                }).catch(function(err) {
-                    console.error('PDF export error:', err);
-                    wrapper.remove();
-                    window.scrollTo(0, savedScroll);
-                    showToast('PDF export failed');
+        // Wait for iframe content to render and images to load
+        setTimeout(function() {
+            var iframeBody = iframeDoc.body;
+
+            // Wait for images inside iframe
+            var imgs = Array.from(iframeBody.querySelectorAll('img'));
+            var imgPromises = imgs.map(function(img) {
+                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                return new Promise(function(resolve) {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                    setTimeout(resolve, 3000);
                 });
-            }, 500);
-        });
+            });
+
+            Promise.all(imgPromises).then(function() {
+                setTimeout(function() {
+                    html2pdf().set({
+                        margin: [10, 10, 10, 10],
+                        filename: safeName,
+                        image: { type: 'jpeg', quality: 0.95 },
+                        html2canvas: {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: true,
+                            logging: false,
+                            backgroundColor: '#ffffff',
+                            scrollX: 0,
+                            scrollY: 0
+                        },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'th'] }
+                    }).from(iframeBody).save().then(function() {
+                        iframe.remove();
+                        showToast('PDF exported!');
+                    }).catch(function(err) {
+                        console.error('PDF export error:', err);
+                        iframe.remove();
+                        showToast('PDF export failed');
+                    });
+                }, 300);
+            });
+        }, 500);
     }
 
     // ===== Helpers =====

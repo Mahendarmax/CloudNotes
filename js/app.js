@@ -1267,252 +1267,184 @@
         updateStats();
     }
 
-    // ===== Export Note as PDF =====
+    // ===== Export Note as PDF (print-based, reads from note JSON data) =====
     function exportNotePdf() {
-        if (!el.body.innerHTML.trim() && !el.title.value.trim()) {
+        // Get data directly from the current note object (not DOM screenshot)
+        var note = notes.find(function(n) { return n.id === editingId; });
+        var noteTitle = (note && note.title) ? note.title : (el.title.value || 'Untitled');
+        var noteBody  = (note && note.body)  ? note.body  : el.body.innerHTML;
+
+        if (!noteTitle.trim() && !noteBody.trim()) {
             showToast('Nothing to export');
             return;
         }
 
-        showToast('Generating PDF...');
+        showToast('Opening print dialog...');
 
-        var noteTitle = el.title.value || 'Untitled';
-        var safeName = noteTitle.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
-        var savedScroll = window.scrollY;
+        // Build a clean HTML document from the note data
+        var printWin = window.open('', '_blank', 'width=900,height=700');
+        if (!printWin) {
+            showToast('Please allow popups to export PDF');
+            return;
+        }
 
-        // Clone the note body
-        var bodyClone = el.body.cloneNode(true);
-        bodyClone.removeAttribute('contenteditable');
-        bodyClone.removeAttribute('id');
-        bodyClone.removeAttribute('class');
+        printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+        printWin.document.write('<title>' + escapeHtml(noteTitle) + '</title>');
+        printWin.document.write('<style>');
+        printWin.document.write([
+            '@page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }',
+            '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+            'body { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;',
+            '       font-size: 14px; line-height: 1.7; color: #222; background: #fff;',
+            '       margin: 0; padding: 0; }',
+
+            /* Title block */
+            '.note-title { font-size: 22px; font-weight: 700; color: #232f3e;',
+            '  text-transform: uppercase; letter-spacing: 2px;',
+            '  border-bottom: 4px solid #232f3e; padding-bottom: 8px; margin: 0 0 6px; }',
+            '.note-accent { height: 3px; background: #ff9900; border-radius: 2px; margin-bottom: 24px; }',
+
+            /* Headings */
+            'h1,h2,h3,h4,h5,h6 { color: #232f3e; page-break-after: avoid; page-break-inside: avoid; }',
+            'h2 { font-size: 18px; border-bottom: 2px solid #ff9900; padding-bottom: 4px; margin: 20px 0 10px; }',
+            'h3 { font-size: 15px; margin: 16px 0 8px; }',
+
+            /* Paragraphs & lists */
+            'p { margin: 6px 0; page-break-inside: avoid; }',
+            'ul,ol { margin: 8px 0 8px 20px; page-break-inside: avoid; }',
+            'li { margin-bottom: 4px; page-break-inside: avoid; }',
+
+            /* Tables — exact match to editor style */
+            'table { width: 100%; border-collapse: collapse; font-size: 12px;',
+            '        margin: 14px 0; table-layout: fixed; page-break-inside: auto; }',
+            'thead { display: table-header-group; }',
+            'tr { page-break-inside: avoid; }',
+            'th { background: #232f3e !important; color: #fff !important;',
+            '     font-weight: 600; text-transform: uppercase; font-size: 11px;',
+            '     letter-spacing: 0.5px; padding: 7px 10px;',
+            '     border: 2px solid #232f3e; text-align: left; vertical-align: top; }',
+            'td { padding: 7px 10px; border: 2px solid #232f3e;',
+            '     text-align: left; vertical-align: top; color: #222;',
+            '     word-break: break-word; overflow-wrap: break-word; }',
+            'tbody tr:nth-child(even) td { background: #f8f9fa; }',
+
+            /* Code blocks */
+            'pre { background: #1e1e2e !important; color: #cdd6f4 !important;',
+            '      border: 1px solid #45475a; border-radius: 6px;',
+            '      padding: 12px 16px; font-family: Consolas, "Courier New", monospace;',
+            '      font-size: 12px; line-height: 1.6; white-space: pre-wrap;',
+            '      word-break: break-word; margin: 10px 0; page-break-inside: avoid; }',
+            'code { font-family: Consolas, "Courier New", monospace; font-size: 12px; }',
+
+            /* Blockquote */
+            'blockquote { border-left: 4px solid #ff9900; padding-left: 14px;',
+            '             color: #555; margin: 10px 0; font-style: italic;',
+            '             page-break-inside: avoid; }',
+
+            /* Highlight / mark */
+            'mark { background: #ffe066 !important; color: #222 !important;',
+            '       padding: 1px 3px; border-radius: 2px; }',
+
+            /* Links */
+            'a { color: #ec7211; text-decoration: underline; }',
+
+            /* HR divider */
+            'hr { border: none; border-top: 3px solid #ff9900; margin: 18px 0; page-break-after: avoid; }',
+
+            /* Images */
+            'img { max-width: 100%; height: auto; display: block; margin: 8px 0;',
+            '      page-break-inside: avoid; border-radius: 4px; }',
+
+            /* Media placeholders */
+            '.media-ph { padding: 8px 12px; background: #fff3e0;',
+            '            border-left: 4px solid #ff9900; border-radius: 0 4px 4px 0;',
+            '            color: #555; font-size: 12px; margin: 8px 0; page-break-inside: avoid; }',
+
+            /* Resizable wrapper (editor artifact — just show the content) */
+            '.resizable-wrapper { position: static !important; width: auto !important; display: block; }',
+            '.resize-handle, .element-delete, .drag-grip { display: none !important; }',
+        ].join('\n'));
+        printWin.document.write('</style></head><body>');
+
+        // Title block
+        printWin.document.write('<div class="note-title">' + escapeHtml(noteTitle) + '</div>');
+        printWin.document.write('<div class="note-accent"></div>');
+
+        // Clean the body HTML: replace media elements with placeholders
+        var parser = new DOMParser();
+        var doc = parser.parseFromString('<div id="root">' + noteBody + '</div>', 'text/html');
+        var root = doc.getElementById('root');
 
         // Remove editor-only UI
-        bodyClone.querySelectorAll('.resize-handle, .element-delete, .drag-placeholder, .drag-grip').forEach(function(e) { e.remove(); });
+        root.querySelectorAll('.resize-handle, .element-delete, .drag-grip, .drag-placeholder').forEach(function(e) { e.remove(); });
 
-        // --- Replace media with styled placeholders ---
-        bodyClone.querySelectorAll('video').forEach(function(v) {
+        // Replace video/audio/iframe with text placeholders
+        root.querySelectorAll('video').forEach(function(v) {
             var src = (v.querySelector('source') || v).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
-            var ph = document.createElement('div');
-            ph.innerHTML = '<span style="font-size:16px;">&#127916;</span> <strong>Video:</strong> ' + escapeHtml(name);
-            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;page-break-inside:avoid;';
+            var ph = doc.createElement('div');
+            ph.className = 'media-ph';
+            ph.textContent = '🎬 Video: ' + name;
             v.replaceWith(ph);
         });
-        bodyClone.querySelectorAll('audio').forEach(function(a) {
+        root.querySelectorAll('audio').forEach(function(a) {
             var src = (a.querySelector('source') || a).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
-            var ph = document.createElement('div');
-            ph.innerHTML = '<span style="font-size:16px;">&#128266;</span> <strong>Audio:</strong> ' + escapeHtml(name);
-            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;page-break-inside:avoid;';
+            var ph = doc.createElement('div');
+            ph.className = 'media-ph';
+            ph.textContent = '🔊 Audio: ' + name;
             a.replaceWith(ph);
         });
-        bodyClone.querySelectorAll('iframe').forEach(function(f) {
+        root.querySelectorAll('iframe').forEach(function(f) {
             var src = f.getAttribute('src') || '';
-            var ph = document.createElement('div');
-            ph.innerHTML = '<span style="font-size:16px;">&#127760;</span> <strong>Embedded:</strong> ' + escapeHtml(src);
-            ph.style.cssText = 'padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 6px 6px 0;color:#333;font-size:13px;margin:10px 0;word-break:break-all;page-break-inside:avoid;';
+            var ph = doc.createElement('div');
+            ph.className = 'media-ph';
+            ph.textContent = '🌐 Embedded: ' + src;
             f.replaceWith(ph);
         });
 
-        // --- Fix images ---
-        bodyClone.querySelectorAll('img').forEach(function(img) {
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = '8px 0';
-            img.style.pageBreakInside = 'avoid';
-        });
-
-        // --- Fix tables: strip hardcoded widths, apply inline styles ---
-        bodyClone.querySelectorAll('table').forEach(function(t) {
-            t.removeAttribute('width');
-            t.style.cssText = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;margin:14px 0;background:#fff;page-break-inside:auto;';
-            t.querySelectorAll('col, colgroup').forEach(function(c) { c.removeAttribute('width'); c.removeAttribute('style'); });
-        });
-        bodyClone.querySelectorAll('th').forEach(function(th) {
-            th.removeAttribute('width');
-            th.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:6px 8px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#232f3e;color:#fff;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;';
-        });
-        bodyClone.querySelectorAll('td').forEach(function(td) {
-            td.removeAttribute('width');
-            td.style.cssText = 'word-break:break-word;overflow-wrap:break-word;padding:6px 8px;border:2px solid #232f3e;text-align:left;vertical-align:top;background:#fff;color:#333;';
-        });
-        // Alternating row color
-        bodyClone.querySelectorAll('table').forEach(function(table) {
-            var rows = table.querySelectorAll('tbody tr');
-            rows.forEach(function(tr, i) {
-                if (i % 2 === 1) {
-                    tr.querySelectorAll('td').forEach(function(td) { td.style.background = '#f8f9fa'; });
+        // Strip inline dark background colors on text nodes
+        root.querySelectorAll('[style]').forEach(function(n) {
+            var bg = n.style.backgroundColor;
+            if (bg) {
+                var m = bg.match(/\d+/g);
+                if (m && (parseInt(m[0])*299 + parseInt(m[1])*587 + parseInt(m[2])*114)/1000 < 60) {
+                    n.style.backgroundColor = '';
                 }
-                tr.style.pageBreakInside = 'avoid';
-            });
-        });
-
-        // --- Fix headings (match editor exactly) ---
-        bodyClone.querySelectorAll('h2').forEach(function(h2) {
-            h2.style.cssText = 'color:#232f3e;background:transparent;font-size:22px;font-weight:700;margin:20px 0 10px 0;border-bottom:2px solid #ff9900;padding-bottom:6px;page-break-after:avoid;page-break-inside:avoid;overflow-wrap:anywhere;';
-        });
-        bodyClone.querySelectorAll('h3').forEach(function(h3) {
-            h3.style.cssText = 'color:#232f3e;background:transparent;font-size:18px;font-weight:700;margin:16px 0 8px 0;page-break-after:avoid;page-break-inside:avoid;overflow-wrap:anywhere;';
-        });
-        bodyClone.querySelectorAll('h1,h4,h5,h6').forEach(function(h) {
-            h.style.color = '#232f3e';
-            h.style.background = 'transparent';
-            h.style.pageBreakAfter = 'avoid';
-            h.style.pageBreakInside = 'avoid';
-        });
-
-        // --- Fix code blocks ---
-        bodyClone.querySelectorAll('pre').forEach(function(pre) {
-            pre.style.cssText = 'background:#1e1e2e;color:#cdd6f4;border:1px solid #45475a;border-radius:8px;padding:14px 18px;font-family:Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:12px 0;overflow:hidden;max-width:100%;page-break-inside:avoid;';
-        });
-
-        // --- Fix blockquotes ---
-        bodyClone.querySelectorAll('blockquote').forEach(function(bq) {
-            bq.style.cssText = 'border-left:4px solid #ff9900;padding-left:16px;color:#555;margin:12px 0;font-style:italic;background:transparent;page-break-inside:avoid;';
-        });
-
-        // --- Fix links ---
-        bodyClone.querySelectorAll('a').forEach(function(a) {
-            a.style.color = '#ec7211';
-            a.style.textDecoration = 'underline';
-            a.style.background = 'transparent';
-        });
-
-        // --- Fix marks ---
-        bodyClone.querySelectorAll('mark').forEach(function(m) {
-            m.style.cssText = 'background:#ffe066;color:#333;padding:1px 3px;border-radius:2px;';
-        });
-
-        // --- Fix lists ---
-        bodyClone.querySelectorAll('ul, ol').forEach(function(list) {
-            list.style.pageBreakInside = 'auto';
-            list.style.background = 'transparent';
-        });
-        bodyClone.querySelectorAll('li').forEach(function(li) {
-            li.style.color = '#333';
-            li.style.background = 'transparent';
-            li.style.pageBreakInside = 'avoid';
-            li.style.marginBottom = '6px';
-        });
-
-        // --- Fix paragraphs ---
-        bodyClone.querySelectorAll('p').forEach(function(p) {
-            p.style.pageBreakInside = 'avoid';
-            p.style.background = 'transparent';
-            if (!p.style.color || p.style.color === 'rgb(232, 232, 232)' || p.style.color === '#e8e8e8') {
-                p.style.color = '#333';
+            }
+            var col = n.style.color;
+            if (col) {
+                var m2 = col.match(/\d+/g);
+                if (m2 && (parseInt(m2[0])*299 + parseInt(m2[1])*587 + parseInt(m2[2])*114)/1000 > 200 && !n.closest('pre') && !n.closest('th')) {
+                    n.style.color = '';
+                }
+            }
+            // Strip oversized widths
+            if (n.style.width && parseInt(n.style.width) > 700 && n.tagName !== 'IMG') {
+                n.style.width = '100%';
             }
         });
 
-        // --- Fix hr dividers ---
-        bodyClone.querySelectorAll('hr').forEach(function(hr) {
-            hr.style.cssText = 'border:none;border-top:3px solid #ff9900;margin:20px 0;page-break-after:avoid;';
-        });
+        printWin.document.write(root.innerHTML);
+        printWin.document.write('</body></html>');
+        printWin.document.close();
 
-        // --- Strip oversized inline widths ---
-        bodyClone.querySelectorAll('[style]').forEach(function(node) {
-            if (node.style.width) {
-                var w = parseInt(node.style.width, 10);
-                if (w > 600) node.style.width = '100%';
-            }
-            if (node.style.minWidth && node.tagName !== 'TD') node.style.minWidth = '0';
-        });
-
-        // --- Force visible text on dark bg elements (outside pre/table) ---
-        bodyClone.querySelectorAll('div, span, strong, em, b, i, u, s').forEach(function(n) {
-            if (!n.closest('pre') && !n.closest('table') && !n.closest('[style*="border-left"]')) {
-                var bg = n.style.backgroundColor || '';
-                if (bg && bg !== 'transparent' && bg !== '#ffe066' && bg !== '#fff3e0') {
-                    var tmp = document.createElement('div');
-                    tmp.style.backgroundColor = bg;
-                    document.body.appendChild(tmp);
-                    var computed = getComputedStyle(tmp).backgroundColor;
-                    document.body.removeChild(tmp);
-                    var match = computed.match(/\d+/g);
-                    if (match) {
-                        var r = parseInt(match[0]), g = parseInt(match[1]), bv = parseInt(match[2]);
-                        var brightness = (r * 299 + g * 587 + bv * 114) / 1000;
-                        if (brightness < 50) n.style.backgroundColor = 'transparent';
-                    }
-                }
-                if (!n.style.color || n.style.color === 'rgb(232, 232, 232)' || n.style.color === '#e8e8e8') {
-                    n.style.color = '#333';
-                }
-            }
-        });
-
-        // --- Build wrapper (position:fixed so html2canvas can capture it) ---
-        var wrapper = document.createElement('div');
-        wrapper.id = 'pdf-export-wrapper';
-        // A4 at 96dpi = 794px wide. Margins 15mm each side ≈ 113px. Content = 680px.
-        var contentWidth = 680;
-        wrapper.style.cssText = 'position:fixed;left:0;top:0;width:' + contentWidth + 'px;background:#ffffff;padding:0;margin:0;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif;box-sizing:border-box;z-index:999999;overflow:visible;';
-
-        // Title bar (matches editor: dark border bottom, uppercase, bold)
-        var titleBar = document.createElement('div');
-        titleBar.style.cssText = 'padding:20px 30px 12px;border-bottom:4px solid #232f3e;background:#ffffff;';
-        var titleDiv = document.createElement('div');
-        titleDiv.textContent = noteTitle;
-        titleDiv.style.cssText = 'font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;word-wrap:break-word;';
-        titleBar.appendChild(titleDiv);
-        // Orange accent line under title
-        var accentLine = document.createElement('div');
-        accentLine.style.cssText = 'height:3px;background:#ff9900;margin-top:8px;border-radius:2px;';
-        titleBar.appendChild(accentLine);
-        wrapper.appendChild(titleBar);
-
-        // Body content (matches editor: padding, font-size, line-height)
-        var bodyDiv = document.createElement('div');
-        bodyDiv.style.cssText = 'padding:20px 30px 30px;font-size:15px;line-height:1.7;color:#333;word-wrap:break-word;overflow-wrap:break-word;background:#ffffff;';
-        bodyDiv.appendChild(bodyClone);
-        wrapper.appendChild(bodyDiv);
-
-        document.body.appendChild(wrapper);
-
-        // Wait for images to load
-        var imgs = Array.from(wrapper.querySelectorAll('img'));
-        var imgPromises = imgs.map(function(img) {
-            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-            return new Promise(function(resolve) {
-                img.onload = resolve;
-                img.onerror = resolve;
-                setTimeout(resolve, 3000);
-            });
-        });
-
-        Promise.all(imgPromises).then(function() {
+        // Trigger print once fully loaded
+        printWin.onload = function() {
             setTimeout(function() {
-                html2pdf().set({
-                    margin: [15, 15, 15, 15],
-                    filename: safeName,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        allowTaint: true,
-                        logging: false,
-                        backgroundColor: '#ffffff',
-                        width: contentWidth,
-                        windowWidth: contentWidth
-                    },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: {
-                        mode: ['avoid-all', 'css', 'legacy'],
-                        avoid: ['tr', 'thead', 'th', 'td', 'img', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'p', 'blockquote', 'pre', 'figure', '.pdf-avoid-break']
-                    }
-                }).from(wrapper).save().then(function() {
-                    wrapper.remove();
-                    window.scrollTo(0, savedScroll);
-                    showToast('PDF exported!');
-                }).catch(function(err) {
-                    console.error('PDF export error:', err);
-                    wrapper.remove();
-                    window.scrollTo(0, savedScroll);
-                    showToast('PDF export failed');
-                });
-            }, 600);
-        });
+                printWin.focus();
+                printWin.print();
+            }, 400);
+        };
+        // Fallback if onload already fired
+        setTimeout(function() {
+            if (printWin && !printWin.closed) {
+                printWin.focus();
+                printWin.print();
+            }
+        }, 1200);
+
+        showToast('PDF ready — save as PDF in print dialog');
     }
 
     // ===== Draw / Sketch (inline overlay on note body) =====

@@ -1267,9 +1267,8 @@
         updateStats();
     }
 
-    // ===== Export Note as PDF (print-based, reads from note JSON data) =====
+    // ===== Export Note as PDF (direct download via html2pdf.js) =====
     function exportNotePdf() {
-        // Get data directly from the current note object (not DOM screenshot)
         var note = notes.find(function(n) { return n.id === editingId; });
         var noteTitle = (note && note.title) ? note.title : (el.title.value || 'Untitled');
         var noteBody  = (note && note.body)  ? note.body  : el.body.innerHTML;
@@ -1279,208 +1278,159 @@
             return;
         }
 
-        showToast('Opening print dialog...');
+        showToast('Generating PDF...');
 
-        // Build a clean HTML document from the note data
-        var printWin = window.open('', '_blank', 'width=900,height=700');
-        if (!printWin) {
-            showToast('Please allow popups to export PDF');
-            return;
-        }
-
-        printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-        printWin.document.write('<title>' + escapeHtml(noteTitle) + '</title>');
-        printWin.document.write('<style>');
-        printWin.document.write([
-            '@page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }',
-            '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
-            'body { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;',
-            '       font-size: 14px; line-height: 1.7; color: #222; background: #fff;',
-            '       margin: 0; padding: 0; }',
-
-            /* Title block */
-            '.note-title { font-size: 22px; font-weight: 700; color: #232f3e;',
-            '  text-transform: uppercase; letter-spacing: 2px;',
-            '  border-bottom: 4px solid #232f3e; padding-bottom: 8px; margin: 0 0 6px; }',
-            '.note-accent { height: 3px; background: #ff9900; border-radius: 2px; margin-bottom: 24px; }',
-
-            /* Headings */
-            'h1,h2,h3,h4,h5,h6 { color: #232f3e; page-break-after: avoid; page-break-inside: avoid; }',
-            'h2 { font-size: 18px; border-bottom: 2px solid #ff9900; padding-bottom: 4px; margin: 20px 0 10px; }',
-            'h3 { font-size: 15px; margin: 16px 0 8px; }',
-
-            /* Paragraphs & lists */
-            'p { margin: 6px 0; page-break-inside: avoid; }',
-            'ul,ol { margin: 8px 0 8px 20px; page-break-inside: avoid; }',
-            'li { margin-bottom: 4px; page-break-inside: avoid; }',
-
-            /* Tables — exact match to editor style */
-            'table { width: 100%; border-collapse: collapse; font-size: 12px;',
-            '        margin: 14px 0; table-layout: fixed; page-break-inside: auto; }',
-            'thead { display: table-header-group; }',
-            'tr { page-break-inside: avoid; }',
-            'th { background: #232f3e !important; color: #fff !important;',
-            '     font-weight: 600; text-transform: uppercase; font-size: 11px;',
-            '     letter-spacing: 0.5px; padding: 7px 10px;',
-            '     border: 2px solid #232f3e; text-align: left; vertical-align: top; }',
-            'td { padding: 7px 10px; border: 2px solid #232f3e;',
-            '     text-align: left; vertical-align: top; color: #222;',
-            '     word-break: break-word; overflow-wrap: break-word; }',
-            'tbody tr:nth-child(even) td { background: #f8f9fa; }',
-
-            /* Code blocks */
-            'pre { background: #1e1e2e !important; color: #cdd6f4 !important;',
-            '      border: 1px solid #45475a; border-radius: 6px;',
-            '      padding: 12px 16px; font-family: Consolas, "Courier New", monospace;',
-            '      font-size: 12px; line-height: 1.6; white-space: pre-wrap;',
-            '      word-break: break-word; margin: 10px 0; page-break-inside: avoid; }',
-            'code { font-family: Consolas, "Courier New", monospace; font-size: 12px; }',
-
-            /* Blockquote */
-            'blockquote { border-left: 4px solid #ff9900; padding-left: 14px;',
-            '             color: #555; margin: 10px 0; font-style: italic;',
-            '             page-break-inside: avoid; }',
-
-            /* Highlight / mark */
-            'mark { background: #ffe066 !important; color: #222 !important;',
-            '       padding: 1px 3px; border-radius: 2px; }',
-
-            /* Links */
-            'a { color: #ec7211; text-decoration: underline; }',
-
-            /* HR divider */
-            'hr { border: none; border-top: 3px solid #ff9900; margin: 18px 0; page-break-after: avoid; }',
-
-            /* Images */
-            'img { max-width: 100%; height: auto; display: block; margin: 8px 0;',
-            '      page-break-inside: avoid; border-radius: 4px; }',
-
-            /* Media placeholders */
-            '.media-ph { padding: 8px 12px; background: #fff3e0;',
-            '            border-left: 4px solid #ff9900; border-radius: 0 4px 4px 0;',
-            '            color: #555; font-size: 12px; margin: 8px 0; page-break-inside: avoid; }',
-
-            /* Resizable wrapper (editor artifact — just show the content) */
-            '.resizable-wrapper { position: static !important; width: auto !important; display: block; }',
-            '.resize-handle, .element-delete, .drag-grip { display: none !important; }',
-        ].join('\n'));
-        printWin.document.write('</style></head><body>');
-
-        // Title block
-        printWin.document.write('<div class="note-title">' + escapeHtml(noteTitle) + '</div>');
-        printWin.document.write('<div class="note-accent"></div>');
-
-        // Clean the body HTML: replace media elements with placeholders
+        // Parse and clean body HTML
         var parser = new DOMParser();
         var doc = parser.parseFromString('<div id="root">' + noteBody + '</div>', 'text/html');
         var root = doc.getElementById('root');
 
-        // Remove editor-only UI
+        // Remove editor-only chrome
         root.querySelectorAll('.resize-handle, .element-delete, .drag-grip, .drag-placeholder').forEach(function(e) { e.remove(); });
 
-        // Replace video/audio/iframe with text placeholders
+        // Replace media with readable placeholders
         root.querySelectorAll('video').forEach(function(v) {
             var src = (v.querySelector('source') || v).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Video';
-            var ph = doc.createElement('div');
-            ph.className = 'media-ph';
-            ph.textContent = '🎬 Video: ' + name;
-            v.replaceWith(ph);
+            var ph = doc.createElement('div'); ph.className = 'media-ph'; ph.textContent = '🎬 Video: ' + name; v.replaceWith(ph);
         });
         root.querySelectorAll('audio').forEach(function(a) {
             var src = (a.querySelector('source') || a).getAttribute('src') || '';
             var name = src ? decodeURIComponent(src.split('/').pop().split('?')[0]) : 'Audio';
-            var ph = doc.createElement('div');
-            ph.className = 'media-ph';
-            ph.textContent = '🔊 Audio: ' + name;
-            a.replaceWith(ph);
+            var ph = doc.createElement('div'); ph.className = 'media-ph'; ph.textContent = '🔊 Audio: ' + name; a.replaceWith(ph);
         });
         root.querySelectorAll('iframe').forEach(function(f) {
-            var src = f.getAttribute('src') || '';
-            var ph = doc.createElement('div');
-            ph.className = 'media-ph';
-            ph.textContent = '🌐 Embedded: ' + src;
-            f.replaceWith(ph);
+            var ph = doc.createElement('div'); ph.className = 'media-ph'; ph.textContent = '🌐 Embedded: ' + (f.getAttribute('src') || ''); f.replaceWith(ph);
         });
 
-        // Strip inline dark background colors on text nodes
+        // Strip dark inline backgrounds & near-white inline text colors
         root.querySelectorAll('[style]').forEach(function(n) {
-            var bg = n.style.backgroundColor;
-            if (bg) {
-                var m = bg.match(/\d+/g);
-                if (m && (parseInt(m[0])*299 + parseInt(m[1])*587 + parseInt(m[2])*114)/1000 < 60) {
-                    n.style.backgroundColor = '';
-                }
-            }
-            var col = n.style.color;
-            if (col) {
-                var m2 = col.match(/\d+/g);
-                if (m2 && (parseInt(m2[0])*299 + parseInt(m2[1])*587 + parseInt(m2[2])*114)/1000 > 200 && !n.closest('pre') && !n.closest('th')) {
-                    n.style.color = '';
-                }
-            }
-            // Strip oversized widths
-            if (n.style.width && parseInt(n.style.width) > 700 && n.tagName !== 'IMG') {
-                n.style.width = '100%';
-            }
+            var brightness = function(css) {
+                var m = (css || '').match(/\d+/g);
+                return m ? (parseInt(m[0])*299 + parseInt(m[1])*587 + parseInt(m[2])*114) / 1000 : 128;
+            };
+            if (n.style.backgroundColor && brightness(n.style.backgroundColor) < 60)  n.style.backgroundColor = '';
+            if (n.style.color && brightness(n.style.color) > 200 && !n.closest('pre') && !n.closest('th')) n.style.color = '';
+            if (n.style.width && parseInt(n.style.width) > 700 && n.tagName !== 'IMG') n.style.width = '100%';
         });
 
-        printWin.document.write(root.innerHTML);
-        printWin.document.write('</body></html>');
-        printWin.document.close();
+        // Build off-screen print container (must be in DOM for html2canvas)
+        var container = document.createElement('div');
+        container.id = 'pdf-render-container';
+        container.style.cssText = [
+            'position:fixed', 'left:-9999px', 'top:0',
+            'width:794px',          // A4 at 96 dpi
+            'background:#ffffff',
+            'color:#222',
+            'font-family:Segoe UI,-apple-system,BlinkMacSystemFont,sans-serif',
+            'font-size:14px', 'line-height:1.7',
+            'padding:40px 50px 50px',
+            'box-sizing:border-box',
+            'z-index:-1'
+        ].join(';');
 
-        // Trigger print once fully loaded
-        printWin.onload = function() {
-            setTimeout(function() {
-                printWin.focus();
-                printWin.print();
-            }, 400);
-        };
-        // Fallback if onload already fired
-        setTimeout(function() {
-            if (printWin && !printWin.closed) {
-                printWin.focus();
-                printWin.print();
+        // Title block
+        var titleEl = document.createElement('div');
+        titleEl.style.cssText = 'font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:4px solid #232f3e;padding-bottom:8px;margin:0 0 4px;word-break:break-word;';
+        titleEl.textContent = noteTitle;
+        container.appendChild(titleEl);
+
+        var accent = document.createElement('div');
+        accent.style.cssText = 'height:3px;background:#ff9900;border-radius:2px;margin-bottom:28px;';
+        container.appendChild(accent);
+
+        // Body content wrapper with scoped styles via a <style> tag
+        var styleEl = document.createElement('style');
+        styleEl.textContent = [
+            '#pdf-render-container h1,#pdf-render-container h2,#pdf-render-container h3,#pdf-render-container h4,#pdf-render-container h5,#pdf-render-container h6{color:#232f3e;page-break-after:avoid;}',
+            '#pdf-render-container h2{font-size:18px;border-bottom:2px solid #ff9900;padding-bottom:4px;margin:20px 0 10px;}',
+            '#pdf-render-container h3{font-size:15px;margin:16px 0 8px;}',
+            '#pdf-render-container p{margin:6px 0;page-break-inside:avoid;}',
+            '#pdf-render-container ul,#pdf-render-container ol{margin:8px 0 8px 20px;}',
+            '#pdf-render-container li{margin-bottom:4px;page-break-inside:avoid;}',
+            '#pdf-render-container table{width:100%;border-collapse:collapse;font-size:12px;margin:14px 0;table-layout:fixed;page-break-inside:auto;}',
+            '#pdf-render-container thead{display:table-header-group;}',
+            '#pdf-render-container tr{page-break-inside:avoid;}',
+            '#pdf-render-container th{background:#232f3e!important;color:#fff!important;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px;padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;}',
+            '#pdf-render-container td{padding:7px 10px;border:2px solid #232f3e;text-align:left;vertical-align:top;color:#222;word-break:break-word;overflow-wrap:break-word;}',
+            '#pdf-render-container tbody tr:nth-child(even) td{background:#f8f9fa;}',
+            '#pdf-render-container pre{background:#1e1e2e!important;color:#cdd6f4!important;border:1px solid #45475a;border-radius:6px;padding:12px 16px;font-family:Consolas,"Courier New",monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:10px 0;page-break-inside:avoid;}',
+            '#pdf-render-container code{font-family:Consolas,"Courier New",monospace;font-size:12px;}',
+            '#pdf-render-container blockquote{border-left:4px solid #ff9900;padding-left:14px;color:#555;margin:10px 0;font-style:italic;page-break-inside:avoid;}',
+            '#pdf-render-container mark{background:#ffe066!important;color:#222!important;padding:1px 3px;border-radius:2px;}',
+            '#pdf-render-container a{color:#ec7211;text-decoration:underline;}',
+            '#pdf-render-container hr{border:none;border-top:3px solid #ff9900;margin:18px 0;}',
+            '#pdf-render-container img{max-width:100%;height:auto;display:block;margin:8px 0;page-break-inside:avoid;border-radius:4px;}',
+            '#pdf-render-container .media-ph{padding:8px 12px;background:#fff3e0;border-left:4px solid #ff9900;border-radius:0 4px 4px 0;color:#555;font-size:12px;margin:8px 0;}',
+            '#pdf-render-container .resizable-wrapper{position:static!important;width:auto!important;display:block;}',
+            '#pdf-render-container .resize-handle,#pdf-render-container .element-delete,#pdf-render-container .drag-grip{display:none!important;}',
+        ].join('');
+        document.head.appendChild(styleEl);
+
+        var bodyWrap = document.createElement('div');
+        bodyWrap.innerHTML = root.innerHTML;
+        container.appendChild(bodyWrap);
+        document.body.appendChild(container);
+
+        var safeName = noteTitle.replace(/[^a-zA-Z0-9\-_ ]/g, '_').trim() + '.pdf';
+
+        html2pdf().set({
+            margin:     [0, 0, 0, 0],
+            filename:   safeName,
+            image:      { type: 'jpeg', quality: 0.97 },
+            html2canvas: {
+                scale:           2,
+                useCORS:         true,
+                allowTaint:      true,
+                backgroundColor: '#ffffff',
+                logging:         false,
+                width:           794
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: {
+                mode:  ['css', 'legacy'],
+                avoid: ['tr', 'thead', 'img', 'pre', 'blockquote', 'h2', 'h3', 'h4', 'li']
             }
-        }, 1200);
-
-        showToast('PDF ready — save as PDF in print dialog');
+        }).from(container).save().then(function() {
+            container.remove();
+            styleEl.remove();
+            showToast('PDF downloaded!');
+        }).catch(function(err) {
+            console.error('PDF export error:', err);
+            container.remove();
+            styleEl.remove();
+            showToast('PDF export failed');
+        });
     }
 
     // ===== Draw / Sketch (inline overlay on note body) =====
     (function initDraw() {
         const drawOverlay = document.getElementById('drawOverlayInline');
         const canvas      = document.getElementById('drawCanvas');
-        const colorPick   = document.getElementById('drawColorPicker');
-        const sizeSlider  = document.getElementById('drawSizeSlider');
         const btnPen      = document.getElementById('drawToolPen');
         const btnEraser   = document.getElementById('drawToolEraser');
-        const btnBg       = document.getElementById('drawBgToggle');
-        const btnClear    = document.getElementById('drawClearBtn');
-        const btnInsert   = document.getElementById('drawInsertBtn');
         const btnClose    = document.getElementById('drawCloseBtn');
         const btnOpen     = document.getElementById('btnOpenDraw');
+        const dragHandle  = document.getElementById('drawDragHandle');
+        const toolbar     = document.getElementById('drawFloatToolbar');
 
         if (!canvas || !drawOverlay) return;
 
-        const ctx = canvas.getContext('2d');
+        const ctx       = canvas.getContext('2d');
+        const PEN_COLOR = '#232f3e';
+        const PEN_SIZE  = 3;
+        const ERASER_SIZE = 22;
+
         let drawing = false;
-        let tool = 'pen';
-        let transparent = true; // canvas bg is transparent by default so content shows through
+        let tool    = 'pen';
+        let lastPos = null;
 
         function syncSize() {
-            const w = drawOverlay.clientWidth;
-            const h = drawOverlay.clientHeight;
-            // Preserve drawing when resizing
             const tmp = document.createElement('canvas');
             tmp.width = canvas.width; tmp.height = canvas.height;
             tmp.getContext('2d').drawImage(canvas, 0, 0);
-            canvas.width = w;
-            canvas.height = h;
-            if (!transparent) {
-                ctx.fillStyle = 'rgba(255,255,255,0.85)';
-                ctx.fillRect(0, 0, w, h);
-            }
+            canvas.width  = drawOverlay.clientWidth;
+            canvas.height = drawOverlay.clientHeight;
             ctx.drawImage(tmp, 0, 0);
         }
 
@@ -1490,101 +1440,101 @@
             return { x: src.clientX - rect.left, y: src.clientY - rect.top };
         }
 
-        function startDraw(e) {
-            // Don't start drawing if clicking on toolbar
-            if (e.target.closest && e.target.closest('#drawFloatToolbar')) return;
-            e.preventDefault();
-            drawing = true;
-            const pos = getPos(e);
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-        }
-
-        function doDraw(e) {
-            if (!drawing) return;
-            if (e.target.closest && e.target.closest('#drawFloatToolbar')) return;
-            e.preventDefault();
-            const pos = getPos(e);
-            ctx.lineWidth  = tool === 'eraser' ? parseInt(sizeSlider.value) * 3 : parseInt(sizeSlider.value);
-            ctx.lineCap    = 'round';
-            ctx.lineJoin   = 'round';
+        function applyToolStyle() {
+            ctx.lineCap  = 'round';
+            ctx.lineJoin = 'round';
             if (tool === 'eraser') {
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.strokeStyle = 'rgba(0,0,0,1)';
+                ctx.lineWidth   = ERASER_SIZE;
             } else {
                 ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = colorPick.value;
+                ctx.strokeStyle = PEN_COLOR;
+                ctx.lineWidth   = PEN_SIZE;
             }
-            ctx.lineTo(pos.x, pos.y);
+        }
+
+        function startDraw(e) {
+            if (e.target.closest && e.target.closest('#drawFloatToolbar')) return;
+            e.preventDefault();
+            drawing = true;
+            lastPos = getPos(e);
+            applyToolStyle();
+            // Draw a dot on tap/click
+            ctx.beginPath();
+            ctx.arc(lastPos.x, lastPos.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+            ctx.fillStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : PEN_COLOR;
+            if (tool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+            }
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(lastPos.x, lastPos.y);
+        }
+
+        function doDraw(e) {
+            if (!drawing || !lastPos) return;
+            if (e.target.closest && e.target.closest('#drawFloatToolbar')) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            applyToolStyle();
+            // Smooth bezier via midpoint technique
+            const mx = (lastPos.x + pos.x) / 2;
+            const my = (lastPos.y + pos.y) / 2;
+            ctx.quadraticCurveTo(lastPos.x, lastPos.y, mx, my);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
+            ctx.moveTo(mx, my);
+            lastPos = pos;
         }
 
         function stopDraw() {
             if (!drawing) return;
             drawing = false;
+            lastPos = null;
             ctx.globalCompositeOperation = 'source-over';
             ctx.beginPath();
         }
 
-        // Canvas events
-        canvas.addEventListener('mousedown', startDraw);
-        canvas.addEventListener('mousemove', doDraw);
-        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mousedown',  startDraw);
+        canvas.addEventListener('mousemove',  doDraw);
+        canvas.addEventListener('mouseup',    stopDraw);
         canvas.addEventListener('mouseleave', stopDraw);
         canvas.addEventListener('touchstart', startDraw, { passive: false });
-        canvas.addEventListener('touchmove', doDraw, { passive: false });
-        canvas.addEventListener('touchend', stopDraw);
+        canvas.addEventListener('touchmove',  doDraw,    { passive: false });
+        canvas.addEventListener('touchend',   stopDraw);
 
-        // Tool buttons
         btnPen.addEventListener('click', () => {
             tool = 'pen';
             btnPen.classList.add('active');
             btnEraser.classList.remove('active');
             canvas.style.cursor = 'crosshair';
         });
+
         btnEraser.addEventListener('click', () => {
             tool = 'eraser';
             btnEraser.classList.add('active');
             btnPen.classList.remove('active');
-            canvas.style.cursor = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Crect x='2' y='2' width='16' height='16' rx='3' fill='%23fff' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E\") 10 10, cell";
-        });
-        btnBg.addEventListener('click', () => {
-            transparent = !transparent;
-            btnBg.classList.toggle('active', !transparent);
-            btnBg.title = transparent ? 'Add white background' : 'Remove background (transparent)';
-            if (!transparent) {
-                // Add semi-transparent white bg under current drawing
-                const tmp = document.createElement('canvas');
-                tmp.width = canvas.width; tmp.height = canvas.height;
-                tmp.getContext('2d').drawImage(canvas, 0, 0);
-                ctx.globalCompositeOperation = 'destination-over';
-                ctx.fillStyle = 'rgba(255,255,255,0.9)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.globalCompositeOperation = 'source-over';
-            } else {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
-        });
-        btnClear.addEventListener('click', () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (!transparent) {
-                ctx.fillStyle = 'rgba(255,255,255,0.9)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+            canvas.style.cursor = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect x='2' y='2' width='20' height='20' rx='4' fill='%23fff' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E\") 12 12, cell";
         });
 
-        // Open draw mode
         btnOpen.addEventListener('click', () => {
             drawOverlay.classList.add('active');
             el.body.contentEditable = 'false';
             syncSize();
             btnOpen.classList.add('active');
-            showToast('Draw mode — click Exit when done');
+            // Reset toolbar to default right-side position
+            toolbar.style.left  = 'auto';
+            toolbar.style.right = '16px';
+            toolbar.style.top   = '20px';
+            // Reset to pen on every open
+            tool = 'pen';
+            btnPen.classList.add('active');
+            btnEraser.classList.remove('active');
+            canvas.style.cursor = 'crosshair';
+            showToast('Draw mode — Pen active. Click Exit when done.');
         });
 
-        // Close / exit draw mode
         btnClose.addEventListener('click', () => {
             drawOverlay.classList.remove('active');
             el.body.contentEditable = 'true';
@@ -1592,53 +1542,58 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         });
 
-        // Insert drawing into note as image
-        btnInsert.addEventListener('click', () => {
-            if (canvas.width === 0 || canvas.height === 0) return;
-            const dataUrl = canvas.toDataURL('image/png');
-            // Close draw mode first
-            drawOverlay.classList.remove('active');
-            el.body.contentEditable = 'true';
-            btnOpen.classList.remove('active');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // ===== Draggable toolbar =====
+        (function makeToolbarDraggable() {
+            let dragging = false, ox = 0, oy = 0, startL = 0, startT = 0;
 
-            // Insert as resizable image
-            const img = document.createElement('img');
-            img.src = dataUrl;
-            img.alt = 'Drawing';
-            img.style.cssText = 'max-width:100%;height:auto;display:block;margin:8px 0;border-radius:4px;';
-            const wrapper = document.createElement('div');
-            wrapper.className = 'resizable-wrapper';
-            wrapper.contentEditable = 'false';
-            const grip = document.createElement('div');
-            grip.className = 'drag-grip';
-            grip.title = 'Drag to move';
-            grip.innerHTML = '<i class="fas fa-grip-vertical"></i>';
-            const handle = document.createElement('div');
-            handle.className = 'resize-handle';
-            const del = document.createElement('button');
-            del.className = 'element-delete';
-            del.innerHTML = '&times;';
-            del.title = 'Remove';
-            del.addEventListener('click', (ev) => { ev.stopPropagation(); wrapper.remove(); scheduleAutoSave(); });
-            wrapper.appendChild(grip);
-            wrapper.appendChild(img);
-            wrapper.appendChild(handle);
-            wrapper.appendChild(del);
-            initResize(wrapper, handle);
-            initDrag(wrapper, grip);
-            insertNodeAtCursor(wrapper);
-            pushUndo();
-            scheduleAutoSave();
-            showToast('Drawing inserted!');
-        });
+            function tbDragStart(e) {
+                dragging = true;
+                const src = e.touches ? e.touches[0] : e;
+                ox = src.clientX; oy = src.clientY;
+                // Current absolute position relative to overlay
+                startL = parseInt(toolbar.style.right  !== '' && toolbar.style.right  !== 'auto' ? '' : toolbar.style.left  || '0') || toolbar.offsetLeft;
+                startT = parseInt(toolbar.style.top || '20') || toolbar.offsetTop;
+                // Switch from right-anchored to left-anchored positioning on first drag
+                if (!toolbar.style.left || toolbar.style.left === 'auto') {
+                    toolbar.style.left  = toolbar.offsetLeft + 'px';
+                    toolbar.style.right = 'auto';
+                }
+                startL = parseInt(toolbar.style.left) || 0;
+                startT = parseInt(toolbar.style.top)  || 0;
+                dragHandle.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+
+            function tbDragMove(e) {
+                if (!dragging) return;
+                const src = e.touches ? e.touches[0] : e;
+                const dx = src.clientX - ox;
+                const dy = src.clientY - oy;
+                const overlayRect = drawOverlay.getBoundingClientRect();
+                const maxL = overlayRect.width  - toolbar.offsetWidth  - 4;
+                const maxT = overlayRect.height - toolbar.offsetHeight - 4;
+                toolbar.style.left = Math.max(4, Math.min(maxL, startL + dx)) + 'px';
+                toolbar.style.top  = Math.max(4, Math.min(maxT, startT + dy)) + 'px';
+                e.preventDefault();
+            }
+
+            function tbDragEnd() {
+                dragging = false;
+                dragHandle.style.cursor = 'grab';
+            }
+
+            dragHandle.addEventListener('mousedown',  tbDragStart);
+            document.addEventListener('mousemove', tbDragMove);
+            document.addEventListener('mouseup',   tbDragEnd);
+            dragHandle.addEventListener('touchstart', tbDragStart, { passive: false });
+            document.addEventListener('touchmove',  tbDragMove,  { passive: false });
+            document.addEventListener('touchend',   tbDragEnd);
+        })();
 
         window.addEventListener('resize', () => {
             if (drawOverlay.classList.contains('active')) syncSize();
         });
     })();
-
-    // ===== Helpers =====
 
     // ===== Helpers =====
     function generateId() {

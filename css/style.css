@@ -1003,94 +1003,89 @@ body {
     display: block;
 }
 
-/* Floating toolbar */
+/* Floating draw toolbar — vertical, draggable */
 .draw-float-toolbar {
     position: absolute;
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 20px;
+    right: 16px;
+    left: auto;
+    transform: none;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 6px;
-    background: rgba(20,26,46,0.95);
-    border: 1px solid #232f3e;
+    background: rgba(15,20,40,0.97);
+    border: 1px solid #2d3748;
     border-top: 3px solid var(--orange);
-    border-radius: 10px;
-    padding: 7px 12px;
-    box-shadow: 0 6px 30px rgba(0,0,0,0.6);
-    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 6px 8px 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,153,0,0.08);
+    backdrop-filter: blur(12px);
     z-index: 51;
-    flex-wrap: wrap;
-    max-width: 95%;
-    justify-content: center;
+    min-width: 108px;
+    user-select: none;
 }
 
-.draw-tb-divider {
-    width: 1px;
-    height: 22px;
-    background: #45475a;
-    margin: 0 2px;
+.draw-drag-handle {
+    cursor: grab;
+    text-align: center;
+    color: #4a5568;
+    font-size: 14px;
+    padding: 2px 0 4px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: color 0.15s;
+}
+.draw-drag-handle:hover { color: var(--orange); }
+.draw-drag-handle:active { cursor: grabbing; }
+
+.draw-tb-sep {
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+    margin: 2px 0;
 }
 
 .draw-tool-btn {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid #45475a;
-    color: var(--text-muted);
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid #3d4a5e;
+    color: #94a3b8;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 12px;
-    transition: all 0.2s;
+    font-weight: 600;
+    transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s;
     display: flex;
     align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    gap: 7px;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+    width: 100%;
 }
-.draw-tool-btn:hover { background: rgba(255,153,0,0.2); color: var(--orange); border-color: var(--orange); }
-.draw-tool-btn.active { background: var(--orange); color: #000; border-color: var(--orange); }
+.draw-tool-btn i { font-size: 12px; width: 14px; text-align: center; }
+.draw-tool-btn:hover { background: rgba(255,153,0,0.18); color: var(--orange); border-color: var(--orange); }
+.draw-tool-btn.active { background: var(--orange); color: #000; border-color: var(--orange); box-shadow: 0 2px 10px rgba(255,153,0,0.3); }
 
-.draw-color-wrap {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-#drawColorPicker {
-    width: 30px;
-    height: 30px;
-    border: 2px solid #45475a;
-    border-radius: 6px;
-    padding: 1px 2px;
-    background: transparent;
-    cursor: pointer;
-}
-
-.draw-size-slider {
-    width: 70px;
-    accent-color: var(--orange);
-    cursor: pointer;
-    vertical-align: middle;
-}
-
-.draw-clear-btn, .draw-insert-btn, .draw-exit-btn {
-    border: 1px solid #45475a;
-    padding: 5px 10px;
-    border-radius: 6px;
+.draw-exit-btn {
+    height: 34px;
+    padding: 0 12px;
+    border: 1.5px solid #3d4a5e;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 4px;
-    transition: all 0.2s;
-    flex-shrink: 0;
+    gap: 7px;
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+    background: rgba(255,255,255,0.05);
+    color: #64748b;
+    white-space: nowrap;
+    width: 100%;
 }
-.draw-clear-btn { background: rgba(255,255,255,0.06); color: var(--text-muted); }
-.draw-clear-btn:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
-.draw-insert-btn { background: var(--orange); color: #000; border-color: var(--orange); }
-.draw-insert-btn:hover { background: var(--orange-light); }
-.draw-exit-btn { background: rgba(255,255,255,0.06); color: var(--text-muted); }
-.draw-exit-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.draw-exit-btn i { font-size: 12px; width: 14px; text-align: center; }
+.draw-exit-btn:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
 .app-layout {
     display: flex;
     min-height: calc(100vh - 56px);

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudNotes By Mahendar — Your Notes, Always Saved</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <link rel="stylesheet" href="css/style.css?v=11">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -171,17 +171,10 @@
                     <canvas id="drawCanvas"></canvas>
                     <!-- Floating toolbar -->
                     <div class="draw-float-toolbar" id="drawFloatToolbar">
-                        <button class="draw-tool-btn active" id="drawToolPen" title="Pen"><i class="fas fa-pen"></i></button>
-                        <button class="draw-tool-btn" id="drawToolEraser" title="Eraser"><i class="fas fa-eraser"></i></button>
-                        <span class="draw-tb-divider"></span>
-                        <label class="draw-color-wrap" title="Pen color">
-                            <input type="color" id="drawColorPicker" value="#ff9900">
-                        </label>
-                        <input type="range" id="drawSizeSlider" min="1" max="30" value="4" class="draw-size-slider" title="Pen size">
-                        <span class="draw-tb-divider"></span>
-                        <button class="draw-tool-btn" id="drawBgToggle" title="Toggle background opacity"><i class="fas fa-adjust"></i></button>
-                        <button class="draw-clear-btn" id="drawClearBtn" title="Clear drawing"><i class="fas fa-trash-alt"></i> Clear</button>
-                        <button class="draw-insert-btn" id="drawInsertBtn" title="Insert drawing into note"><i class="fas fa-check"></i> Insert</button>
+                        <div class="draw-drag-handle" id="drawDragHandle" title="Drag to move"><i class="fas fa-grip-horizontal"></i></div>
+                        <button class="draw-tool-btn active" id="drawToolPen" title="Pen"><i class="fas fa-pen"></i> Pen</button>
+                        <button class="draw-tool-btn" id="drawToolEraser" title="Eraser"><i class="fas fa-eraser"></i> Erase</button>
+                        <div class="draw-tb-sep"></div>
                         <button class="draw-exit-btn" id="drawCloseBtn" title="Exit draw mode"><i class="fas fa-times"></i> Exit</button>
                     </div>
                 </div>
@@ -223,6 +216,6 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=15"></script>
+    <script src="js/app.js?v=18"></script>
 </body>
 </html>

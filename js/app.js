@@ -1304,10 +1304,14 @@
             if(n.style.width && parseInt(n.style.width)>700 && n.tagName!=='IMG') n.style.width='100%';
         });
 
+        var now = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
         var css = [
-            '@page{size:A4 portrait;margin:15mm;}',
+            '@page{size:A4 portrait;margin:0;}',
             '*{box-sizing:border-box;}',
-            'body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.7;color:#222;background:#fff;margin:0;padding:0;}',
+            'body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.7;color:#222;background:#fff;margin:0;padding:14mm 15mm 14mm 15mm;}',
+            '.pdf-header{position:fixed;top:0;left:0;right:0;height:10mm;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#666;padding:0 15mm;border-bottom:1px solid #e8e8e8;background:#fff;}',
+            '.pdf-footer{position:fixed;bottom:0;left:0;right:0;height:10mm;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#666;padding:0 15mm;border-top:1px solid #e8e8e8;background:#fff;}',
             '.note-title{font-size:22px;font-weight:700;color:#232f3e;text-transform:uppercase;letter-spacing:2px;border-bottom:4px solid #232f3e;padding-bottom:8px;margin-bottom:4px;word-break:break-word;}',
             '.note-accent{height:3px;background:#ff9900;border-radius:2px;margin-bottom:28px;}',
             'h1,h2,h3,h4,h5,h6{color:#232f3e;page-break-after:avoid;}',
@@ -1334,6 +1338,8 @@
 
         var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Document By Mahendar</title>'
             + '<style>' + css + '</style></head><body>'
+            + '<div class="pdf-header"><span>' + now + '</span><span></span></div>'
+            + '<div class="pdf-footer"><span>Document By Mahendar</span><span></span></div>'
             + '<div class="note-title">' + escapeHtml(noteTitle) + '</div>'
             + '<div class="note-accent"></div>'
             + root.innerHTML
